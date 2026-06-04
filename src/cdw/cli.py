@@ -9,6 +9,7 @@ from cdw.config import RuntimeConfig
 from cdw.planner import build_plan
 from cdw.resume import resume_run
 from cdw.runtime import execute_plan
+from cdw.skill import install_skill
 from cdw.workflow_spec import load_workflow_spec, save_workflow_spec
 
 
@@ -33,12 +34,18 @@ def build_parser() -> argparse.ArgumentParser:
     resume_command.add_argument("run_id")
     resume_command.add_argument("--root", default=".")
     resume_command.add_argument("--adapter", choices=("fake", "live"), default="fake")
+    install_skill_command = subparsers.add_parser("install-skill")
+    install_skill_command.add_argument("--root", default=".")
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
+    if args.command == "install-skill":
+        path = install_skill(Path(args.root))
+        print(f"skill {path}")
+        return 0
     config = RuntimeConfig(root=Path(args.root), adapter=args.adapter)
     if args.command == "resume":
         adapter = _build_adapter(config)

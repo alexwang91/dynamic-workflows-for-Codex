@@ -74,3 +74,19 @@ def test_resume_command_continues_existing_run(tmp_path, capsys):
 
     assert exit_code == 0
     assert f"run {run_id}" in capsys.readouterr().out
+
+
+def test_install_skill_command_writes_repo_skill(tmp_path, capsys):
+    exit_code = main(["install-skill", "--root", str(tmp_path)])
+
+    captured = capsys.readouterr()
+    skill_path = (
+        tmp_path
+        / ".agents"
+        / "skills"
+        / "dynamic-workflows-for-Codex"
+        / "SKILL.md"
+    )
+    assert exit_code == 0
+    assert captured.out.strip() == f"skill {skill_path}"
+    assert skill_path.exists()
