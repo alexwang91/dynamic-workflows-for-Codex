@@ -62,3 +62,15 @@ def test_run_executes_workflow_spec(tmp_path, capsys):
     captured = capsys.readouterr()
     assert exit_code == 0
     assert captured.out.strip().splitlines()[-1].startswith("run ")
+
+
+def test_resume_command_continues_existing_run(tmp_path, capsys):
+    main(["review", "Review branch", "--root", str(tmp_path), "--adapter", "fake"])
+    run_id = capsys.readouterr().out.strip().split()[-1]
+
+    exit_code = main(
+        ["resume", run_id, "--root", str(tmp_path), "--adapter", "fake"]
+    )
+
+    assert exit_code == 0
+    assert f"run {run_id}" in capsys.readouterr().out
