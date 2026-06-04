@@ -13,7 +13,7 @@ from cdw.runtime import execute_plan
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="cdw",
-        description="Codex Dynamic Workflows external runtime.",
+        description="dynamic-workflows-for-Codex external runtime.",
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
     for name in ("plan", "review", "debug"):

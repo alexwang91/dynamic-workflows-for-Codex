@@ -103,7 +103,7 @@ class LiveCodexAdapter:
             raise RuntimeError(
                 "Live Codex MCP mode requires the optional 'live' dependencies: "
                 "openai-agents, openai, and python-dotenv. Install with: "
-                "pip install 'codex-dynamic-workflows[live]'."
+                "pip install 'dynamic-workflows-for-Codex[live]'."
             ) from exc
         return asyncio.run(
             self._run_agent_async(agent_name, task_prompt, Agent, Runner, MCPServerStdio)

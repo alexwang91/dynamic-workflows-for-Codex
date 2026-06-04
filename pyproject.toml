@@ -3,7 +3,7 @@ requires = ["setuptools>=69", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "codex-dynamic-workflows"
+name = "dynamic-workflows-for-Codex"
 version = "0.1.0"
 description = "External orchestration runtime that recreates Claude-style dynamic workflows for Codex."
 readme = "README.md"

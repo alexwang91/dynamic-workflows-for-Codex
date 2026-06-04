@@ -1,4 +1,4 @@
-# Codex Dynamic Workflows
+# dynamic-workflows-for-Codex
 
 External orchestration runtime that recreates Claude-style dynamic workflows for Codex.
 
