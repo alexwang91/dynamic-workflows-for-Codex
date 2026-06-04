@@ -11,6 +11,7 @@ class Command(str, Enum):
     PLAN = "plan"
     REVIEW = "review"
     DEBUG = "debug"
+    MIGRATE = "migrate"
 
 
 class WorkUnit(BaseModel):

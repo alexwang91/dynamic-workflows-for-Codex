@@ -10,6 +10,8 @@ def build_plan(command: str, request: str) -> WorkflowPlan:
         return _debug_plan(request)
     if command == "plan":
         return _planning_plan(request)
+    if command == "migrate":
+        return _migration_plan(request)
     raise ValueError(f"Unsupported command: {command}")
 
 
@@ -112,5 +114,59 @@ def _planning_plan(request: str) -> WorkflowPlan:
                     "strategy, and stop condition."
                 ),
             )
+        ],
+    )
+
+
+def _migration_plan(request: str) -> WorkflowPlan:
+    return WorkflowPlan(
+        command="migrate",
+        request=request,
+        pattern="guarded-migration",
+        verification_strategy="patch-review",
+        stop_condition="migration_review_complete",
+        work_units=[
+            WorkUnit(
+                id="inventory",
+                role="migration inventory planner",
+                goal="Find affected symbols, files, and callers",
+                prompt=(
+                    "Create a read-only migration inventory for: "
+                    f"{request}. ownership: identify affected modules, owners, "
+                    "callers, generated files, and files that should remain untouched."
+                ),
+                expected_output=(
+                    "Affected symbols and files, with ownership boundaries and "
+                    "areas excluded from the migration."
+                ),
+            ),
+            WorkUnit(
+                id="patch-plan",
+                role="migration patch planner",
+                goal="Propose bounded file ownership slices",
+                prompt=(
+                    "Propose a guarded patch plan for: "
+                    f"{request}. ownership: split the migration into bounded "
+                    "file/module slices and name the checks required before edits."
+                ),
+                expected_output=(
+                    "Ordered patch slices, ownership boundaries, risk notes, and "
+                    "required tests for each slice."
+                ),
+            ),
+            WorkUnit(
+                id="verification",
+                role="migration verifier",
+                goal="Review migration risks before write-heavy work",
+                prompt=(
+                    "Verify the proposed migration approach for: "
+                    f"{request}. ownership: challenge risky slices, missing tests, "
+                    "compatibility breaks, and any area needing human approval."
+                ),
+                expected_output=(
+                    "Patch-review findings, migration risks, required tests, and "
+                    "approval gates before write-heavy execution."
+                ),
+            ),
         ],
     )

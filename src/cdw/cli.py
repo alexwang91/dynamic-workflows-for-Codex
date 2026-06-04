@@ -18,7 +18,7 @@ def build_parser() -> argparse.ArgumentParser:
         description="dynamic-workflows-for-Codex external runtime.",
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
-    for name in ("plan", "review", "debug"):
+    for name in ("plan", "review", "debug", "migrate"):
         command = subparsers.add_parser(name)
         command.add_argument("request")
         command.add_argument("--root", default=".")
