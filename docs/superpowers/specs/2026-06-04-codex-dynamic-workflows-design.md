@@ -1,14 +1,14 @@
 ---
-title: Codex Dynamic Workflows Design
+title: dynamic-workflows-for-Codex Design
 date: 2026-06-04
 status: approved-for-planning
 ---
 
-# Codex Dynamic Workflows Design
+# dynamic-workflows-for-Codex Design
 
 ## 1. Product Goal
 
-Build `codex-dynamic-workflows`, a GitHub-shareable external orchestration runtime that recreates the architectural effect of Claude Code dynamic workflows for Codex.
+Build `dynamic-workflows-for-Codex`, a GitHub-shareable external orchestration runtime that recreates the architectural effect of Claude Code dynamic workflows for Codex.
 
 This project is not a prompt library and not a Codex skill-only workflow. It is a runtime that:
 

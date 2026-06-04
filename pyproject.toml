@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dynamic-workflows-for-Codex"
+version = "0.1.0"
+description = "External orchestration runtime that recreates Claude-style dynamic workflows for Codex."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "pydantic>=2.7",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.2",
+]
+live = [
+  "openai>=1.0",
+  "openai-agents>=0.1",
+  "python-dotenv>=1.0",
+]
+
+[project.scripts]
+cdw = "cdw.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

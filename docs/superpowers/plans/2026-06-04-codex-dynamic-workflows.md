@@ -1,4 +1,4 @@
-# Codex Dynamic Workflows Implementation Plan
+# dynamic-workflows-for-Codex Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -71,7 +71,7 @@ requires = ["setuptools>=69", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "codex-dynamic-workflows"
+name = "dynamic-workflows-for-Codex"
 version = "0.1.0"
 description = "External orchestration runtime that recreates Claude-style dynamic workflows for Codex."
 readme = "README.md"
@@ -128,7 +128,7 @@ import argparse
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="cdw",
-        description="Codex Dynamic Workflows external runtime.",
+        description="dynamic-workflows-for-Codex external runtime.",
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
     for name in ("plan", "review", "debug"):
@@ -146,7 +146,7 @@ def main(argv: list[str] | None = None) -> int:
 Create minimal `README.md`:
 
 ```md
-# Codex Dynamic Workflows
+# dynamic-workflows-for-Codex
 
 External orchestration runtime that recreates Claude-style dynamic workflows for Codex.
 
@@ -772,7 +772,7 @@ from cdw.runtime import execute_plan
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="cdw",
-        description="Codex Dynamic Workflows external runtime.",
+        description="dynamic-workflows-for-Codex external runtime.",
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
     for name in ("plan", "review", "debug"):
@@ -873,7 +873,7 @@ class LiveCodexAdapter:
         except ImportError as exc:
             raise RuntimeError(
                 "Live Codex MCP mode requires the optional 'live' dependencies: "
-                "pip install 'codex-dynamic-workflows[live]'."
+                "pip install 'dynamic-workflows-for-Codex[live]'."
             ) from exc
         raise NotImplementedError("Live Codex MCP execution will be implemented after fake-runtime MVP verification.")
 
