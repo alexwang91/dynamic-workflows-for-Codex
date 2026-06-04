@@ -15,3 +15,11 @@
 - Fake adapter mode works without OpenAI credentials.
 - Live adapter mode fails clearly when optional dependencies are missing.
 - Live adapter mode constructs a `codex mcp-server` stdio server through the Agents SDK.
+
+## v0.2 Behavior
+
+- `cdw plan --save-spec` writes a reusable workflow spec without executing it.
+- `cdw run <workflow-spec>` validates and executes a saved workflow spec.
+- `cdw resume <run-id>` reuses persisted worker and verifier results instead of starting over.
+- `cdw migrate` creates a guarded migration workflow with ownership boundaries and patch-review gates.
+- `cdw install-skill` writes a repo-local skill that delegates orchestration to `cdw`.
