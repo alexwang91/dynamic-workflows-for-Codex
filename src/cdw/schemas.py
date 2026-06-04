@@ -27,6 +27,7 @@ class WorkUnit(BaseModel):
 class WorkflowPlan(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+    schema_version: str = "1"
     command: Command
     request: str = Field(min_length=1)
     pattern: str = Field(min_length=1)
