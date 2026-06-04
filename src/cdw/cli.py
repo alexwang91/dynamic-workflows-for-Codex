@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import sys
 from pathlib import Path
 
 from cdw.codex_mcp import FakeCodexAdapter
@@ -29,7 +30,11 @@ def main(argv: list[str] | None = None) -> int:
     config = RuntimeConfig(root=Path(args.root), adapter=args.adapter)
     plan = build_plan(args.command, args.request)
     adapter = _build_adapter(config)
-    state = execute_plan(plan, config.root, adapter)
+    try:
+        state = execute_plan(plan, config.root, adapter)
+    except RuntimeError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
     print(f"run {state.run_id}")
     return 0
 

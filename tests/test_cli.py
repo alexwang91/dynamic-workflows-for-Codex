@@ -29,3 +29,14 @@ def test_plan_command_persists_state(tmp_path, capsys):
     assert state_path.exists()
     data = json.loads(state_path.read_text(encoding="utf-8"))
     assert data["plan"]["command"] == "plan"
+
+
+def test_live_adapter_dependency_error_is_user_facing(tmp_path, capsys):
+    exit_code = main(
+        ["plan", "Review branch", "--root", str(tmp_path), "--adapter", "live"]
+    )
+
+    captured = capsys.readouterr()
+
+    assert exit_code == 1
+    assert "openai-agents" in captured.err
