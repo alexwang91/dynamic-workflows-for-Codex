@@ -32,8 +32,9 @@ trigger.
 ## Modes
 
 - `fake`: deterministic local worker adapter for development and tests.
-- `live`: reserved for Codex MCP execution through the optional `openai-agents`
-  dependency.
+- `live`: uses the OpenAI Agents SDK to launch `codex mcp-server` and run
+  scoped Codex worker sessions. This requires the optional `[live]`
+  dependencies and a working local `codex` command.
 
 ## Runtime Artifacts
 

@@ -14,3 +14,4 @@
 - `cdw debug` fans out to logs, tests, code-path, and timing investigators.
 - Fake adapter mode works without OpenAI credentials.
 - Live adapter mode fails clearly when optional dependencies are missing.
+- Live adapter mode constructs a `codex mcp-server` stdio server through the Agents SDK.
