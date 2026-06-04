@@ -8,6 +8,7 @@ from cdw.codex_mcp import FakeCodexAdapter
 from cdw.config import RuntimeConfig
 from cdw.planner import build_plan
 from cdw.runtime import execute_plan
+from cdw.workflow_spec import load_workflow_spec, save_workflow_spec
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -21,6 +22,12 @@ def build_parser() -> argparse.ArgumentParser:
         command.add_argument("request")
         command.add_argument("--root", default=".")
         command.add_argument("--adapter", choices=("fake", "live"), default="fake")
+        if name == "plan":
+            command.add_argument("--save-spec")
+    run_command = subparsers.add_parser("run")
+    run_command.add_argument("workflow_spec")
+    run_command.add_argument("--root", default=".")
+    run_command.add_argument("--adapter", choices=("fake", "live"), default="fake")
     return parser
 
 
@@ -28,7 +35,14 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
     config = RuntimeConfig(root=Path(args.root), adapter=args.adapter)
-    plan = build_plan(args.command, args.request)
+    if args.command == "run":
+        plan = load_workflow_spec(Path(args.workflow_spec))
+    else:
+        plan = build_plan(args.command, args.request)
+    if args.command == "plan" and args.save_spec:
+        path = save_workflow_spec(Path(args.save_spec), plan)
+        print(f"spec {path}")
+        return 0
     adapter = _build_adapter(config)
     try:
         state = execute_plan(plan, config.root, adapter)
