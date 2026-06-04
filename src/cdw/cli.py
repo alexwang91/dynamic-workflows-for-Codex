@@ -37,4 +37,6 @@ def main(argv: list[str] | None = None) -> int:
 def _build_adapter(config: RuntimeConfig):
     if config.adapter == "fake":
         return FakeCodexAdapter()
-    raise RuntimeError("Live adapter is not implemented in this task.")
+    from cdw.codex_mcp import LiveCodexAdapter
+
+    return LiveCodexAdapter(root=config.root)
