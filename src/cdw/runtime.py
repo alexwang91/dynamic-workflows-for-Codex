@@ -17,16 +17,39 @@ def execute_plan(plan: WorkflowPlan, root: Path, adapter: CodexAdapter) -> RunSt
     state = create_run_state(plan)
     save_run_state(root, state)
 
-    for work_unit in plan.work_units:
+    ensure_worker_results(root, state, adapter)
+    ensure_verification_results(root, state, adapter)
+    finalize_synthesis(root, state)
+    return state
+
+
+def ensure_worker_results(
+    root: Path, state: RunState, adapter: CodexAdapter
+) -> RunState:
+    completed = {result.work_unit_id for result in state.worker_results}
+    for work_unit in state.plan.work_units:
+        if work_unit.id in completed:
+            continue
         worker_result = adapter.run_worker(work_unit)
         state.worker_results.append(worker_result)
         save_run_state(root, state)
+    return state
 
+
+def ensure_verification_results(
+    root: Path, state: RunState, adapter: CodexAdapter
+) -> RunState:
+    completed = {result.work_unit_id for result in state.verification_results}
     for worker_result in state.worker_results:
+        if worker_result.work_unit_id in completed:
+            continue
         verification = adapter.verify_worker_result(worker_result)
         state.verification_results.append(verification)
         save_run_state(root, state)
+    return state
 
+
+def finalize_synthesis(root: Path, state: RunState) -> RunState:
     state.synthesis = _synthesize(state)
     save_run_state(root, state)
     return state

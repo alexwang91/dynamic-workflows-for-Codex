@@ -4,12 +4,13 @@ External orchestration runtime that recreates Claude-style dynamic workflows for
 
 The runtime generates typed workflow plans, executes specialist worker tasks through a swappable adapter, persists intermediate state under `.cdw/runs/`, verifies outputs before synthesis, and loops against explicit stop conditions.
 
-MVP commands:
+Core commands:
 
 ```bash
 cdw plan "Review this branch"
 cdw review "Review this branch with specialist agents"
 cdw debug "This test fails 1 in 50 runs"
+cdw migrate "Rename User model to Account"
 ```
 
 ## Quickstart
@@ -18,6 +19,11 @@ cdw debug "This test fails 1 in 50 runs"
 python -m pip install -e ".[dev]"
 python -m pytest
 python -m cdw plan "Review this branch" --adapter fake
+python -m cdw plan "Review this branch" --save-spec .cdw/specs/review.workflow.json
+python -m cdw run .cdw/specs/review.workflow.json --adapter fake
+python -m cdw resume <run-id> --adapter fake
+python -m cdw migrate "Rename User model to Account" --adapter fake
+python -m cdw install-skill
 ```
 
 ## What This Recreates
@@ -46,3 +52,11 @@ Each command creates a run directory:
 
 The state file is the source of truth for the workflow. It contains the plan,
 worker results, verifier results, and final synthesis.
+
+Workflow specs are JSON files validated as `WorkflowPlan` objects. Save them
+with `cdw plan --save-spec`, rerun them with `cdw run`, and resume partial
+runs from `.cdw/runs/<run-id>/state.json` with `cdw resume`.
+
+`cdw install-skill` writes a repo-local Codex skill wrapper to
+`.agents/skills/dynamic-workflows-for-Codex/SKILL.md`. The skill delegates to
+the runtime; it does not own orchestration.
