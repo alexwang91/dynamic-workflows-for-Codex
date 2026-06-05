@@ -46,3 +46,4 @@
 - `cdw live-smoke --execute` reports live execution exceptions as a `live-run` check.
 - Live adapter instructions include a parseable Codex MCP tool contract.
 - `cdw live-smoke --dry-contract` prints the live-smoke Codex MCP tool contract without live preflight checks.
+- On Windows, Codex command resolution skips the inaccessible WindowsApps OpenAI.Codex package resource when the user-level Codex CLI exists.

@@ -1,3 +1,4 @@
+import builtins
 import json
 import subprocess
 
@@ -32,7 +33,16 @@ def test_plan_command_persists_state(tmp_path, capsys):
     assert data["plan"]["command"] == "plan"
 
 
-def test_live_adapter_dependency_error_is_user_facing(tmp_path, capsys):
+def test_live_adapter_dependency_error_is_user_facing(tmp_path, capsys, monkeypatch):
+    real_import = builtins.__import__
+
+    def fake_import(name, *args, **kwargs):
+        if name == "agents":
+            raise ImportError("missing agents")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", fake_import)
+
     exit_code = main(
         ["plan", "Review branch", "--root", str(tmp_path), "--adapter", "live"]
     )
