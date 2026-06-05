@@ -1,7 +1,7 @@
 import subprocess
 from types import SimpleNamespace
 
-from cdw.live_smoke import run_live_smoke
+from cdw.live_smoke import build_live_smoke_contract, run_live_smoke
 
 
 def test_live_smoke_reports_missing_codex_without_traceback(monkeypatch, tmp_path):
@@ -14,6 +14,25 @@ def test_live_smoke_reports_missing_codex_without_traceback(monkeypatch, tmp_pat
         check.name == "codex-command" and not check.ok for check in report.checks
     )
     assert "not found" in report.to_text().lower()
+
+
+def test_live_smoke_contract_does_not_run_preflight(monkeypatch, tmp_path):
+    def fail_find_spec(name):
+        raise AssertionError("dry contract must not check imports")
+
+    def fail_run(args, **kwargs):
+        raise AssertionError("dry contract must not execute subprocesses")
+
+    monkeypatch.setattr("importlib.util.find_spec", fail_find_spec)
+    monkeypatch.setattr("subprocess.run", fail_run)
+
+    contract = build_live_smoke_contract(tmp_path)
+
+    assert contract["tool"] == "codex"
+    assert contract["arguments"]["cwd"] == str(tmp_path)
+    assert contract["arguments"]["sandbox"] == "workspace-write"
+    assert contract["arguments"]["approval-policy"] == "never"
+    assert "live worker" in contract["arguments"]["prompt"]
 
 
 def test_live_smoke_uses_explicit_codex_command(monkeypatch, tmp_path):

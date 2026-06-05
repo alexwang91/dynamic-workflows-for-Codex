@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
 from cdw.codex_mcp import FakeCodexAdapter
 from cdw.codex_command import resolve_codex_command
 from cdw.config import RuntimeConfig
-from cdw.live_smoke import run_live_smoke
+from cdw.live_smoke import build_live_smoke_contract, run_live_smoke
 from cdw.planner import build_plan
 from cdw.plugin_package import package_plugin
 from cdw.plugin_package import package_repo_marketplace
@@ -46,6 +47,7 @@ def build_parser() -> argparse.ArgumentParser:
     live_smoke_command = subparsers.add_parser("live-smoke")
     live_smoke_command.add_argument("--root", default=".")
     live_smoke_command.add_argument("--execute", action="store_true")
+    live_smoke_command.add_argument("--dry-contract", action="store_true")
     live_smoke_command.add_argument("--codex-command")
     package_plugin_command = subparsers.add_parser("package-plugin")
     package_plugin_command.add_argument("--output", default="plugins")
@@ -62,6 +64,9 @@ def main(argv: list[str] | None = None) -> int:
         print(f"skill {path}")
         return 0
     if args.command == "live-smoke":
+        if args.dry_contract:
+            print(json.dumps(build_live_smoke_contract(Path(args.root)), indent=2))
+            return 0
         report = run_live_smoke(
             Path(args.root),
             execute=args.execute,

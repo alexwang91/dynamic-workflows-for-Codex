@@ -32,6 +32,8 @@ must be honest about what it is about to run and what failed.
 - The generated instruction must still tell the coordinating agent to call the
   Codex MCP `codex` tool exactly once with `prompt`, `cwd`, `sandbox`, and
   `approval-policy`.
+- `cdw live-smoke --dry-contract` must print the live-smoke Codex MCP tool
+  contract as JSON without checking imports, API keys, or a Codex CLI binary.
 - Unit tests must not require `openai`, `openai-agents`, an API key, or a real
   Codex CLI.
 
@@ -49,5 +51,7 @@ must be honest about what it is about to run and what failed.
   resolved Codex command and reports live-run failures.
 - `python -m pytest tests/test_codex_mcp.py -v` proves the MCP tool contract is
   parseable and includes the exact execution arguments.
+- `python -m cdw live-smoke --dry-contract` prints JSON and exits zero even on a
+  machine without live dependencies.
 - `python -m pytest -v` passes.
 - `python -m cdw live-smoke` still reports local environment blockers cleanly.

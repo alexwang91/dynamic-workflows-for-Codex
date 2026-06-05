@@ -82,6 +82,13 @@ def run_live_smoke(
     return report
 
 
+def build_live_smoke_contract(root: Path) -> dict[str, object]:
+    plan = _live_smoke_plan()
+    adapter = LiveCodexAdapter(root=root)
+    work_unit = plan.work_units[0]
+    return adapter._codex_mcp_tool_contract(adapter._worker_task_prompt(work_unit))
+
+
 def _check_import(report: LiveSmokeReport, module_name: str, success: str) -> None:
     if importlib.util.find_spec(module_name) is None:
         report.checks.append(

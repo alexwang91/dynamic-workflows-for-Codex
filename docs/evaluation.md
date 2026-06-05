@@ -39,3 +39,10 @@
 - `cdw live-smoke` reports the selected Codex command source.
 - `cdw live-smoke` gives an actionable override hint for WindowsApps access-denied failures.
 - Live adapter execution passes the resolved command to the Codex MCP stdio server.
+
+## v0.5 Behavior
+
+- `cdw live-smoke --execute` uses the same resolved Codex command that preflight validated.
+- `cdw live-smoke --execute` reports live execution exceptions as a `live-run` check.
+- Live adapter instructions include a parseable Codex MCP tool contract.
+- `cdw live-smoke --dry-contract` prints the live-smoke Codex MCP tool contract without live preflight checks.

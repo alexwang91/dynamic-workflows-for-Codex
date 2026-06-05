@@ -105,12 +105,16 @@ scoped Codex worker sessions.
 
 ```bash
 python -m pip install -e ".[live]"
+python -m cdw live-smoke --dry-contract
 python -m cdw live-smoke
 python -m cdw live-smoke --execute
 ```
 
 Live mode uses the user's own OpenAI/Codex authentication. This repo does not
 ship or require the author's API key.
+
+`--dry-contract` prints the Codex MCP tool contract without checking live
+dependencies, API keys, or the Codex CLI binary.
 
 If your discovered `codex` command is not directly executable, pass an
 override:

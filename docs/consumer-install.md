@@ -19,8 +19,13 @@ worker dispatch, verification, and synthesis.
 git clone <repo-url>
 cd dynamic-workflows-for-Codex
 python -m pip install -e ".[live]"
+python -m cdw live-smoke --dry-contract
 python -m cdw live-smoke
 ```
+
+`live-smoke --dry-contract` prints the Codex MCP tool contract that would be
+used for the live smoke worker. It does not require `OPENAI_API_KEY`, the
+OpenAI Agents SDK, or a working `codex` command.
 
 If `live-smoke` reports that the discovered `codex` command is not directly
 executable, point `cdw` at the user's own Codex CLI:

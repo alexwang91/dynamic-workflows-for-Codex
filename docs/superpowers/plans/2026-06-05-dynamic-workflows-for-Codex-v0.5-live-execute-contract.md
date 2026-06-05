@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Make `cdw live-smoke --execute` use the same resolved Codex command it validated, return structured diagnostics when live execution fails, and make the live Codex MCP request contract parseable in tests.
+**Goal:** Make `cdw live-smoke --execute` use the same resolved Codex command it validated, return structured diagnostics when live execution fails, make the live Codex MCP request contract parseable in tests, and expose that contract without requiring live dependencies.
 
-**Architecture:** Keep smoke diagnostics inside `src/cdw/live_smoke.py`. Keep live request shaping inside `src/cdw/codex_mcp.py` by adding a small contract builder that returns the Codex MCP tool name and arguments before rendering the coordinating-agent instruction.
+**Architecture:** Keep smoke diagnostics inside `src/cdw/live_smoke.py`. Keep live request shaping inside `src/cdw/codex_mcp.py` by adding a small contract builder that returns the Codex MCP tool name and arguments before rendering the coordinating-agent instruction. Add a CLI dry mode that prints that same contract as JSON before any live preflight checks run.
 
 **Tech Stack:** Python 3.10+, pytest.
 
@@ -241,4 +241,118 @@ Expected: PASS.
 ```bash
 git add docs/superpowers/specs/2026-06-05-dynamic-workflows-for-Codex-v0.5-live-execute-contract.md docs/superpowers/plans/2026-06-05-dynamic-workflows-for-Codex-v0.5-live-execute-contract.md tests/test_codex_mcp.py src/cdw/codex_mcp.py
 git commit -m "feat: add parseable codex mcp contract"
+```
+
+## Task 5: Expose the Live Smoke Contract Without Live Dependencies
+
+**Files:**
+- Modify: `tests/test_live_smoke.py`
+- Modify: `tests/test_cli.py`
+- Modify: `src/cdw/live_smoke.py`
+- Modify: `src/cdw/cli.py`
+
+- [ ] **Step 1: Write the failing core test**
+
+Add this test to `tests/test_live_smoke.py`:
+
+```python
+from cdw.live_smoke import build_live_smoke_contract, run_live_smoke
+
+
+def test_live_smoke_contract_does_not_run_preflight(monkeypatch, tmp_path):
+    def fail_find_spec(name):
+        raise AssertionError("dry contract must not check imports")
+
+    def fail_run(args, **kwargs):
+        raise AssertionError("dry contract must not execute subprocesses")
+
+    monkeypatch.setattr("importlib.util.find_spec", fail_find_spec)
+    monkeypatch.setattr("subprocess.run", fail_run)
+
+    contract = build_live_smoke_contract(tmp_path)
+
+    assert contract["tool"] == "codex"
+    assert contract["arguments"]["cwd"] == str(tmp_path)
+    assert contract["arguments"]["sandbox"] == "workspace-write"
+    assert contract["arguments"]["approval-policy"] == "never"
+    assert "live worker" in contract["arguments"]["prompt"]
+```
+
+- [ ] **Step 2: Run the core test to verify it fails**
+
+Run: `python -m pytest tests/test_live_smoke.py::test_live_smoke_contract_does_not_run_preflight -v`
+
+Expected: FAIL because `build_live_smoke_contract` does not exist.
+
+- [ ] **Step 3: Write minimal core implementation**
+
+Add `build_live_smoke_contract(root: Path) -> dict[str, object]` to
+`src/cdw/live_smoke.py`. It should build `_live_smoke_plan()`, take the first
+work unit, create `LiveCodexAdapter(root=root)`, and return the adapter's Codex
+MCP tool contract for that work unit's worker prompt.
+
+- [ ] **Step 4: Write the failing CLI test**
+
+Add this test to `tests/test_cli.py`:
+
+```python
+def test_live_smoke_dry_contract_prints_json_without_preflight(
+    tmp_path,
+    capsys,
+    monkeypatch,
+):
+    def fail_find_spec(name):
+        raise AssertionError("dry contract must not check imports")
+
+    def fail_run(args, **kwargs):
+        raise AssertionError("dry contract must not execute subprocesses")
+
+    monkeypatch.setattr("importlib.util.find_spec", fail_find_spec)
+    monkeypatch.setattr("subprocess.run", fail_run)
+
+    exit_code = main(["live-smoke", "--root", str(tmp_path), "--dry-contract"])
+
+    captured = capsys.readouterr()
+    data = json.loads(captured.out)
+    assert exit_code == 0
+    assert data["tool"] == "codex"
+    assert data["arguments"]["cwd"] == str(tmp_path)
+```
+
+- [ ] **Step 5: Run the CLI test to verify it fails**
+
+Run: `python -m pytest tests/test_cli.py::test_live_smoke_dry_contract_prints_json_without_preflight -v`
+
+Expected: FAIL because the parser does not accept `--dry-contract`.
+
+- [ ] **Step 6: Write minimal CLI implementation**
+
+Add `--dry-contract` to the `live-smoke` subcommand. In the `live-smoke` branch
+of `main`, print:
+
+```python
+json.dumps(build_live_smoke_contract(Path(args.root)), indent=2)
+```
+
+and return `0` before calling `run_live_smoke`.
+
+- [ ] **Step 7: Verify and commit**
+
+Run:
+
+```bash
+python -m pytest tests/test_live_smoke.py tests/test_cli.py -v
+python -m pytest -v
+python -m cdw live-smoke --dry-contract
+python -m cdw live-smoke
+```
+
+Expected: focused and full tests pass. `--dry-contract` exits zero with JSON.
+Plain `live-smoke` may report local environment blockers but must not traceback.
+
+Commit:
+
+```bash
+git add docs/superpowers/specs/2026-06-05-dynamic-workflows-for-Codex-v0.5-live-execute-contract.md docs/superpowers/plans/2026-06-05-dynamic-workflows-for-Codex-v0.5-live-execute-contract.md tests/test_live_smoke.py tests/test_cli.py src/cdw/live_smoke.py src/cdw/cli.py
+git commit -m "feat: expose live smoke dry contract"
 ```

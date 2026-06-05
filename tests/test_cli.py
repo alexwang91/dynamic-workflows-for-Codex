@@ -129,6 +129,29 @@ def test_live_smoke_command_accepts_codex_command(tmp_path, capsys, monkeypatch)
     assert "codex-test" in capsys.readouterr().out
 
 
+def test_live_smoke_dry_contract_prints_json_without_preflight(
+    tmp_path,
+    capsys,
+    monkeypatch,
+):
+    def fail_find_spec(name):
+        raise AssertionError("dry contract must not check imports")
+
+    def fail_run(args, **kwargs):
+        raise AssertionError("dry contract must not execute subprocesses")
+
+    monkeypatch.setattr("importlib.util.find_spec", fail_find_spec)
+    monkeypatch.setattr("subprocess.run", fail_run)
+
+    exit_code = main(["live-smoke", "--root", str(tmp_path), "--dry-contract"])
+
+    captured = capsys.readouterr()
+    data = json.loads(captured.out)
+    assert exit_code == 0
+    assert data["tool"] == "codex"
+    assert data["arguments"]["cwd"] == str(tmp_path)
+
+
 def test_package_plugin_command_writes_package(tmp_path, capsys):
     exit_code = main(["package-plugin", "--output", str(tmp_path)])
 
