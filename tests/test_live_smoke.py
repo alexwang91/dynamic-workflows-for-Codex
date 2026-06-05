@@ -1,4 +1,5 @@
 import subprocess
+from types import SimpleNamespace
 
 from cdw.live_smoke import run_live_smoke
 
@@ -52,3 +53,56 @@ def test_live_smoke_replaces_invalid_codex_version_output(monkeypatch, tmp_path)
     assert report.ok
     assert run_kwargs["encoding"] == "utf-8"
     assert run_kwargs["errors"] == "replace"
+
+
+def test_live_smoke_execute_uses_resolved_codex_command(monkeypatch, tmp_path):
+    captured = {}
+
+    monkeypatch.setattr("importlib.util.find_spec", lambda name: object())
+    monkeypatch.setattr(
+        "subprocess.run",
+        lambda args, **kwargs: subprocess.CompletedProcess(
+            args,
+            0,
+            stdout="codex-test 1.0",
+            stderr="",
+        ),
+    )
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+
+    def fake_execute_plan(plan, root, adapter):
+        captured["codex_command"] = adapter.codex_command
+        return SimpleNamespace(run_id="live123")
+
+    monkeypatch.setattr("cdw.live_smoke.execute_plan", fake_execute_plan)
+
+    report = run_live_smoke(tmp_path, execute=True, codex_command="codex-test")
+
+    assert report.ok
+    assert report.run_id == "live123"
+    assert captured["codex_command"] == "codex-test"
+
+
+def test_live_smoke_execute_reports_runtime_failure(monkeypatch, tmp_path):
+    monkeypatch.setattr("importlib.util.find_spec", lambda name: object())
+    monkeypatch.setattr(
+        "subprocess.run",
+        lambda args, **kwargs: subprocess.CompletedProcess(
+            args,
+            0,
+            stdout="codex-test 1.0",
+            stderr="",
+        ),
+    )
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+
+    def fake_execute_plan(plan, root, adapter):
+        raise RuntimeError("live failed")
+
+    monkeypatch.setattr("cdw.live_smoke.execute_plan", fake_execute_plan)
+
+    report = run_live_smoke(tmp_path, execute=True, codex_command="codex-test")
+
+    assert not report.ok
+    assert any(check.name == "live-run" and not check.ok for check in report.checks)
+    assert "live failed" in report.to_text()

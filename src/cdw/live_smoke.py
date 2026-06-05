@@ -53,8 +53,32 @@ def run_live_smoke(
     if execute:
         _check_openai_key(report)
         if report.ok:
-            state = execute_plan(_live_smoke_plan(), root, LiveCodexAdapter(root=root))
-            report.run_id = state.run_id
+            try:
+                state = execute_plan(
+                    _live_smoke_plan(),
+                    root,
+                    LiveCodexAdapter(
+                        root=root,
+                        codex_command=resolution.command or "codex",
+                    ),
+                )
+            except Exception as exc:
+                report.checks.append(
+                    CheckResult(
+                        name="live-run",
+                        ok=False,
+                        message=str(exc) or exc.__class__.__name__,
+                    )
+                )
+            else:
+                report.checks.append(
+                    CheckResult(
+                        name="live-run",
+                        ok=True,
+                        message="live worker completed.",
+                    )
+                )
+                report.run_id = state.run_id
     return report
 
 
