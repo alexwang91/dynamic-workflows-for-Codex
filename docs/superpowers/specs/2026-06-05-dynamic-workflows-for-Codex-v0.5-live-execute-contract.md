@@ -1,0 +1,47 @@
+# dynamic-workflows-for-Codex v0.5 Live Execute Contract Design
+
+## Goal
+
+Make `cdw live-smoke --execute` a trustworthy diagnostic for the live adapter path.
+
+## Context
+
+v0.4 made the Codex CLI command configurable through `--codex-command` and
+`CDW_CODEX_COMMAND`. That fixed preflight command selection, but the execute
+path still needs a tighter contract:
+
+- The smoke check can validate one command while the live adapter launches the
+  default `codex` command.
+- A live execution failure can escape as a traceback instead of a structured
+  smoke report.
+
+This is the next smallest useful step toward a real Claude-style dynamic
+workflow: before expanding workflow specs or plugin packaging, the live path
+must be honest about what it is about to run and what failed.
+
+## Requirements
+
+- `run_live_smoke(..., execute=True, codex_command=...)` must pass the resolved
+  command into `LiveCodexAdapter`.
+- `run_live_smoke(..., execute=True)` must report live execution exceptions as a
+  failed `live-run` check instead of crashing.
+- A successful execute smoke should add an `ok` `live-run` check and preserve the
+  returned run id.
+- Unit tests must not require `openai`, `openai-agents`, an API key, or a real
+  Codex CLI.
+
+## Non-Goals
+
+- Do not change the workflow spec language.
+- Do not add resume semantics in this step.
+- Do not change plugin packaging in this step.
+- Do not require a successful live OpenAI/Codex call on this machine.
+- Do not change authentication behavior or ask users to share API keys.
+
+## Acceptance Checks
+
+- `python -m pytest tests/test_live_smoke.py -v` proves the execute path uses the
+  resolved Codex command and reports live-run failures.
+- `python -m pytest -v` passes.
+- `python -m cdw live-smoke` still reports local environment blockers cleanly.
+
