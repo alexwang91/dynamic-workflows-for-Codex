@@ -13,8 +13,8 @@ workflows: task-specific plans, isolated workers, persisted state, verification
 gates, and synthesis from structured intermediate results.
 
 It is built so someone can clone this repo, install it into their own Codex
-environment, and run workflows with their own Codex account, API key, quota,
-and model access.
+environment, and run workflows with their own Codex account, login state, API
+key, quota, and model access.
 
 ## Quickstart
 
@@ -71,6 +71,7 @@ For the full consumer setup, read [docs/consumer-install.md](docs/consumer-insta
 - `cdw resume`: continue an incomplete persisted run.
 - `cdw live-smoke`: diagnose live-mode prerequisites.
 - `cdw package-plugin`: generate Codex plugin packages.
+- `--adapter codex-cli`: run workers through the user's logged-in Codex CLI.
 
 ## How It Works
 
@@ -97,6 +98,23 @@ python -m cdw review "Review this branch" --adapter fake
 ```
 
 Use it for tests, demos, and local development.
+
+### Codex CLI
+
+Codex CLI mode uses the user's own `codex exec` login state. It does not require
+this repo to store or receive an API key:
+
+```bash
+codex login status
+python -m cdw review "Review this branch" --adapter codex-cli
+python -m cdw run .cdw/specs/review.workflow.json --adapter codex-cli
+```
+
+If `codex` is not on PATH, pass the user's own executable:
+
+```bash
+python -m cdw review "Review this branch" --adapter codex-cli --codex-command /path/to/codex
+```
 
 ### Live
 

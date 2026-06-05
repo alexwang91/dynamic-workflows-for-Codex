@@ -1,7 +1,8 @@
 # Consumer Install
 
 This repo is meant to give another Codex user dynamic workflow capability with
-their own Codex installation, account, API key, subscription, and model quota.
+their own Codex installation, account, login state, API key, subscription, and
+model quota.
 It does not ship or require the project author's API key.
 
 ## What Gets Installed
@@ -42,6 +43,16 @@ python -m pip install -e ".[dev]"
 python -m pytest
 python -m cdw review "Review this branch" --adapter fake
 ```
+
+For the closest clone-and-use path, use the user's logged-in Codex CLI:
+
+```powershell
+codex login status
+python -m cdw review "Review this branch" --adapter codex-cli
+```
+
+`--adapter codex-cli` shells out to the user's own `codex exec`. It does not
+need this repo to know or store the user's API key.
 
 ## Add The Plugin Marketplace To Codex
 

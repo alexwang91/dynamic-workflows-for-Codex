@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Make `cdw live-smoke --execute` use the same resolved Codex command it validated, return structured diagnostics when live execution fails, make the live Codex MCP request contract parseable in tests, and expose that contract without requiring live dependencies.
+**Goal:** Make `cdw live-smoke --execute` use the same resolved Codex command it validated, return structured diagnostics when live execution fails, make the live Codex MCP request contract parseable in tests, expose that contract without requiring live dependencies, and add a Codex CLI adapter that uses the user's own logged-in Codex.
 
-**Architecture:** Keep smoke diagnostics inside `src/cdw/live_smoke.py`. Keep live request shaping inside `src/cdw/codex_mcp.py` by adding a small contract builder that returns the Codex MCP tool name and arguments before rendering the coordinating-agent instruction. Add a CLI dry mode that prints that same contract as JSON before any live preflight checks run.
+**Architecture:** Keep smoke diagnostics inside `src/cdw/live_smoke.py`. Keep live request shaping inside `src/cdw/codex_mcp.py` by adding a small contract builder that returns the Codex MCP tool name and arguments before rendering the coordinating-agent instruction. Add a CLI dry mode that prints that same contract as JSON before any live preflight checks run. Add `src/cdw/codex_cli.py` as a separate adapter that shells out to `codex exec`, preserving the existing runtime state/verification pipeline.
 
 **Tech Stack:** Python 3.10+, pytest.
 
@@ -355,4 +355,228 @@ Commit:
 ```bash
 git add docs/superpowers/specs/2026-06-05-dynamic-workflows-for-Codex-v0.5-live-execute-contract.md docs/superpowers/plans/2026-06-05-dynamic-workflows-for-Codex-v0.5-live-execute-contract.md tests/test_live_smoke.py tests/test_cli.py src/cdw/live_smoke.py src/cdw/cli.py
 git commit -m "feat: expose live smoke dry contract"
+```
+
+## Task 6: Add Codex CLI Adapter For User-Logged-In Codex
+
+**Files:**
+- Create: `src/cdw/codex_cli.py`
+- Create: `tests/test_codex_cli.py`
+- Modify: `src/cdw/cli.py`
+- Modify: `tests/test_cli.py`
+- Modify: `README.md`
+- Modify: `docs/consumer-install.md`
+- Modify: `docs/evaluation.md`
+
+- [ ] **Step 1: Write failing adapter tests**
+
+Create `tests/test_codex_cli.py`:
+
+```python
+import subprocess
+
+import pytest
+
+from cdw.codex_cli import CodexCliAdapter
+from cdw.schemas import WorkerResult, WorkerStatus, WorkUnit
+
+
+def test_codex_cli_adapter_runs_worker_with_codex_exec(monkeypatch, tmp_path):
+    calls = {}
+
+    def fake_run(args, **kwargs):
+        calls["args"] = args
+        calls["kwargs"] = kwargs
+        return subprocess.CompletedProcess(args, 0, stdout="worker output", stderr="")
+
+    monkeypatch.setattr("subprocess.run", fake_run)
+    adapter = CodexCliAdapter(root=tmp_path, codex_command="codex-test")
+    work_unit = WorkUnit(
+        id="review",
+        role="reviewer",
+        goal="Review branch",
+        prompt="Find issues",
+        expected_output="Findings",
+    )
+
+    result = adapter.run_worker(work_unit)
+
+    assert calls["args"][:-1] == [
+        "codex-test",
+        "exec",
+        "-C",
+        str(tmp_path),
+        "-s",
+        "workspace-write",
+        "-a",
+        "never",
+    ]
+    assert "Role: reviewer" in calls["args"][-1]
+    assert calls["kwargs"]["encoding"] == "utf-8"
+    assert result.status == "succeeded"
+    assert result.raw_output == "worker output"
+
+
+def test_codex_cli_adapter_verifies_first_line(monkeypatch, tmp_path):
+    monkeypatch.setattr(
+        "subprocess.run",
+        lambda args, **kwargs: subprocess.CompletedProcess(
+            args,
+            0,
+            stdout="PASSED\nlooks good",
+            stderr="",
+        ),
+    )
+    adapter = CodexCliAdapter(root=tmp_path, codex_command="codex-test")
+    worker_result = WorkerResult(
+        work_unit_id="review",
+        status=WorkerStatus.SUCCEEDED,
+        summary="summary",
+        evidence=["evidence"],
+        raw_output="raw",
+    )
+
+    result = adapter.verify_worker_result(worker_result)
+
+    assert result.status == "passed"
+    assert "looks good" in result.notes
+
+
+def test_codex_cli_adapter_raises_user_facing_error_on_cli_failure(
+    monkeypatch,
+    tmp_path,
+):
+    monkeypatch.setattr(
+        "subprocess.run",
+        lambda args, **kwargs: subprocess.CompletedProcess(
+            args,
+            1,
+            stdout="",
+            stderr="not logged in",
+        ),
+    )
+    adapter = CodexCliAdapter(root=tmp_path, codex_command="codex-test")
+    work_unit = WorkUnit(
+        id="review",
+        role="reviewer",
+        goal="Review branch",
+        prompt="Find issues",
+        expected_output="Findings",
+    )
+
+    with pytest.raises(RuntimeError, match="not logged in"):
+        adapter.run_worker(work_unit)
+```
+
+- [ ] **Step 2: Run adapter tests to verify they fail**
+
+Run: `python -m pytest tests/test_codex_cli.py -v`
+
+Expected: FAIL because `cdw.codex_cli` does not exist.
+
+- [ ] **Step 3: Implement `CodexCliAdapter`**
+
+Create `src/cdw/codex_cli.py` with a dataclass that:
+
+- stores `root`, `sandbox`, `approval_policy`, `timeout_seconds`, and `codex_command`;
+- runs `subprocess.run([codex_command, "exec", "-C", root, "-s", sandbox, "-a", approval_policy, prompt], capture_output=True, encoding="utf-8", errors="replace", timeout=timeout_seconds, check=False)`;
+- returns `WorkerResult` for worker output;
+- returns `VerificationResult` based on whether verifier output starts with `PASSED`;
+- raises `RuntimeError` with the CLI output when `codex exec` fails.
+
+- [ ] **Step 4: Wire CLI adapter**
+
+Add `codex-cli` to every `--adapter` choice in `src/cdw/cli.py`.
+
+Update `_build_adapter`:
+
+```python
+if config.adapter == "codex-cli":
+    from cdw.codex_cli import CodexCliAdapter
+
+    resolution = resolve_codex_command(explicit=codex_command)
+    return CodexCliAdapter(
+        root=config.root,
+        codex_command=resolution.command or "codex",
+    )
+```
+
+- [ ] **Step 5: Write CLI test**
+
+Add to `tests/test_cli.py`:
+
+```python
+def test_codex_cli_adapter_runs_without_openai_agents(
+    tmp_path,
+    capsys,
+    monkeypatch,
+):
+    real_import = builtins.__import__
+
+    def fake_import(name, *args, **kwargs):
+        if name == "agents":
+            raise ImportError("agents should not be imported")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", fake_import)
+    monkeypatch.setattr(
+        "subprocess.run",
+        lambda args, **kwargs: subprocess.CompletedProcess(
+            args,
+            0,
+            stdout="PASSED\ncodex cli output",
+            stderr="",
+        ),
+    )
+
+    exit_code = main(
+        [
+            "plan",
+            "Review branch",
+            "--root",
+            str(tmp_path),
+            "--adapter",
+            "codex-cli",
+            "--codex-command",
+            "codex-test",
+        ]
+    )
+
+    assert exit_code == 0
+    assert capsys.readouterr().out.startswith("run ")
+```
+
+- [ ] **Step 6: Run focused tests**
+
+Run:
+
+```bash
+python -m pytest tests/test_codex_cli.py tests/test_cli.py::test_codex_cli_adapter_runs_without_openai_agents -v
+```
+
+Expected: PASS.
+
+- [ ] **Step 7: Document and verify**
+
+Add README and consumer docs examples:
+
+```bash
+codex login status
+python -m cdw review "Review this branch" --adapter codex-cli
+```
+
+Run:
+
+```bash
+python -m pytest -v
+python -m cdw live-smoke
+```
+
+Expected: tests pass; live-smoke preflight remains clean on this machine.
+
+- [ ] **Step 8: Commit**
+
+```bash
+git add src/cdw/codex_cli.py tests/test_codex_cli.py src/cdw/cli.py tests/test_cli.py README.md docs/consumer-install.md docs/evaluation.md docs/superpowers/specs/2026-06-05-dynamic-workflows-for-Codex-v0.5-live-execute-contract.md docs/superpowers/plans/2026-06-05-dynamic-workflows-for-Codex-v0.5-live-execute-contract.md
+git commit -m "feat: add codex cli adapter"
 ```

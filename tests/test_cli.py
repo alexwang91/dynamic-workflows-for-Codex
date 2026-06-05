@@ -53,6 +53,46 @@ def test_live_adapter_dependency_error_is_user_facing(tmp_path, capsys, monkeypa
     assert "openai-agents" in captured.err
 
 
+def test_codex_cli_adapter_runs_without_openai_agents(
+    tmp_path,
+    capsys,
+    monkeypatch,
+):
+    real_import = builtins.__import__
+
+    def fake_import(name, *args, **kwargs):
+        if name == "agents":
+            raise ImportError("agents should not be imported")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", fake_import)
+    monkeypatch.setattr(
+        "subprocess.run",
+        lambda args, **kwargs: subprocess.CompletedProcess(
+            args,
+            0,
+            stdout="PASSED\ncodex cli output",
+            stderr="",
+        ),
+    )
+
+    exit_code = main(
+        [
+            "plan",
+            "Review branch",
+            "--root",
+            str(tmp_path),
+            "--adapter",
+            "codex-cli",
+            "--codex-command",
+            "codex-test",
+        ]
+    )
+
+    assert exit_code == 0
+    assert capsys.readouterr().out.startswith("run ")
+
+
 def test_plan_can_save_workflow_spec(tmp_path):
     spec_path = tmp_path / "review.workflow.json"
 

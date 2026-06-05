@@ -47,3 +47,4 @@
 - Live adapter instructions include a parseable Codex MCP tool contract.
 - `cdw live-smoke --dry-contract` prints the live-smoke Codex MCP tool contract without live preflight checks.
 - On Windows, Codex command resolution skips the inaccessible WindowsApps OpenAI.Codex package resource when the user-level Codex CLI exists.
+- `--adapter codex-cli` runs workflow workers through the user's own `codex exec` login state without importing OpenAI Agents SDK dependencies.
