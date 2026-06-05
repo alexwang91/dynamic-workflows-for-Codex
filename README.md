@@ -28,6 +28,9 @@ python -m cdw live-smoke
 python -m cdw package-plugin --output plugins
 ```
 
+For someone cloning this repo to use the dynamic workflow capability in their
+own Codex environment, see [docs/consumer-install.md](docs/consumer-install.md).
+
 ## What This Recreates
 
 This project recreates the architectural effect of Claude Dynamic Workflows:
@@ -68,6 +71,14 @@ the runtime; it does not own orchestration.
 `cdw live-smoke` diagnoses live-mode prerequisites without printing secrets.
 Use `cdw live-smoke --execute` only when live dependencies, a working `codex`
 CLI, and `OPENAI_API_KEY` are available.
+
+If the discovered `codex` command is not directly executable, pass an override:
+
+```bash
+CDW_CODEX_COMMAND=/path/to/codex python -m cdw live-smoke
+python -m cdw live-smoke --codex-command /path/to/codex
+python -m cdw review "Review this branch" --adapter live --codex-command /path/to/codex
+```
 
 `cdw package-plugin --output plugins` writes a local Codex plugin package at
 `plugins/dynamic-workflows-for-codex/` with `.codex-plugin/plugin.json` and a

@@ -72,3 +72,45 @@ def test_live_adapter_runs_worker_through_codex_mcp(monkeypatch, tmp_path):
     assert str(tmp_path) in calls["runner_prompt"]
     assert result.status == "succeeded"
     assert result.raw_output == "worker found evidence"
+
+
+def test_live_adapter_uses_configured_codex_command(monkeypatch, tmp_path):
+    calls = {}
+
+    class FakeMCPServerStdio:
+        def __init__(self, name, params, client_session_timeout_seconds):
+            calls["server_params"] = params
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return None
+
+    class FakeAgent:
+        def __init__(self, name, instructions, mcp_servers):
+            pass
+
+    class FakeRunner:
+        @staticmethod
+        async def run(agent, prompt):
+            return SimpleNamespace(final_output="worker found evidence")
+
+    agents_module = types.ModuleType("agents")
+    agents_module.Agent = FakeAgent
+    agents_module.Runner = FakeRunner
+    mcp_module = types.ModuleType("agents.mcp")
+    mcp_module.MCPServerStdio = FakeMCPServerStdio
+    agents_module.mcp = mcp_module
+    monkeypatch.setitem(sys.modules, "agents", agents_module)
+    monkeypatch.setitem(sys.modules, "agents.mcp", mcp_module)
+
+    plan = build_plan("plan", "Review branch")
+    adapter = LiveCodexAdapter(root=tmp_path, codex_command="codex-test")
+
+    adapter.run_worker(plan.work_units[0])
+
+    assert calls["server_params"] == {
+        "command": "codex-test",
+        "args": ["mcp-server"],
+    }

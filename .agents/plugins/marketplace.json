@@ -1,0 +1,20 @@
+{
+  "name": "dynamic-workflows-for-codex",
+  "interface": {
+    "displayName": "Dynamic Workflows for Codex"
+  },
+  "plugins": [
+    {
+      "name": "dynamic-workflows-for-codex",
+      "source": {
+        "source": "local",
+        "path": "./plugins/dynamic-workflows-for-codex"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

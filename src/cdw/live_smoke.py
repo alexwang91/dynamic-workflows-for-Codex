@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import importlib.util
 import os
-import shutil
 import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from cdw.codex_mcp import LiveCodexAdapter
+from cdw.codex_command import CodexCommandResolution, resolve_codex_command
 from cdw.schemas import WorkflowPlan, WorkUnit
 from cdw.runtime import execute_plan
 
@@ -38,14 +38,18 @@ class LiveSmokeReport:
         return "\n".join(lines)
 
 
-def run_live_smoke(root: Path, execute: bool = False) -> LiveSmokeReport:
+def run_live_smoke(
+    root: Path,
+    execute: bool = False,
+    codex_command: str | None = None,
+) -> LiveSmokeReport:
     report = LiveSmokeReport()
 
     _check_import(report, "agents", "openai-agents package importable")
     _check_import(report, "openai", "openai package importable")
-    codex_path = _check_codex_command(report)
-    if codex_path is not None:
-        _check_codex_version(report, codex_path)
+    resolution = resolve_codex_command(explicit=codex_command)
+    if _check_codex_command(report, resolution):
+        _check_codex_version(report, resolution.command or "codex")
     if execute:
         _check_openai_key(report)
         if report.ok:
@@ -67,9 +71,11 @@ def _check_import(report: LiveSmokeReport, module_name: str, success: str) -> No
     report.checks.append(CheckResult(name=f"{module_name}-import", ok=True, message=success))
 
 
-def _check_codex_command(report: LiveSmokeReport) -> str | None:
-    codex_path = shutil.which("codex")
-    if codex_path is None:
+def _check_codex_command(
+    report: LiveSmokeReport,
+    resolution: CodexCommandResolution,
+) -> bool:
+    if resolution.command is None:
         report.checks.append(
             CheckResult(
                 name="codex-command",
@@ -77,11 +83,15 @@ def _check_codex_command(report: LiveSmokeReport) -> str | None:
                 message="codex command not found on PATH.",
             )
         )
-        return None
+        return False
     report.checks.append(
-        CheckResult(name="codex-command", ok=True, message=f"found {codex_path}")
+        CheckResult(
+            name="codex-command",
+            ok=True,
+            message=f"source={resolution.source} command={resolution.command}",
+        )
     )
-    return codex_path
+    return True
 
 
 def _check_codex_version(report: LiveSmokeReport, codex_path: str) -> None:
@@ -89,7 +99,8 @@ def _check_codex_version(report: LiveSmokeReport, codex_path: str) -> None:
         completed = subprocess.run(
             [codex_path, "--version"],
             capture_output=True,
-            text=True,
+            encoding="utf-8",
+            errors="replace",
             timeout=10,
             check=False,
         )
@@ -98,7 +109,7 @@ def _check_codex_version(report: LiveSmokeReport, codex_path: str) -> None:
             CheckResult(
                 name="codex-version",
                 ok=False,
-                message=f"could not execute codex --version: {exc}",
+                message=_codex_version_error_message(codex_path, exc),
             )
         )
         return
@@ -117,6 +128,16 @@ def _check_codex_version(report: LiveSmokeReport, codex_path: str) -> None:
     report.checks.append(
         CheckResult(name="codex-version", ok=True, message=output or "executable")
     )
+
+
+def _codex_version_error_message(codex_path: str, exc: BaseException) -> str:
+    message = f"could not execute codex --version: {exc}"
+    if "WindowsApps" in codex_path and isinstance(exc, PermissionError):
+        return (
+            f"{message}. Hint: set CDW_CODEX_COMMAND or pass --codex-command "
+            "with a directly executable Codex CLI path."
+        )
+    return message
 
 
 def _check_openai_key(report: LiveSmokeReport) -> None:

@@ -28,10 +28,22 @@ def package_plugin(output_parent: Path) -> Path:
     return plugin_root
 
 
+def package_repo_marketplace(root: Path) -> Path:
+    marketplace_root = root / ".agents" / "plugins"
+    plugin_root = package_plugin(marketplace_root / "plugins")
+    marketplace_path = marketplace_root / "marketplace.json"
+    marketplace_path.parent.mkdir(parents=True, exist_ok=True)
+    marketplace_path.write_text(
+        json.dumps(_marketplace_manifest(plugin_root.name), indent=2) + "\n",
+        encoding="utf-8",
+    )
+    return marketplace_path
+
+
 def _plugin_manifest() -> dict:
     return {
         "name": PLUGIN_NAME,
-        "version": "0.3.0",
+        "version": "0.4.0",
         "description": "External dynamic workflow runtime entrypoint for Codex.",
         "author": {
             "name": "Local developer",
@@ -55,4 +67,27 @@ def _plugin_manifest() -> dict:
                 "Create a guarded migration workflow.",
             ],
         },
+    }
+
+
+def _marketplace_manifest(plugin_name: str) -> dict:
+    return {
+        "name": "dynamic-workflows-for-codex",
+        "interface": {
+            "displayName": "Dynamic Workflows for Codex",
+        },
+        "plugins": [
+            {
+                "name": plugin_name,
+                "source": {
+                    "source": "local",
+                    "path": f"./plugins/{plugin_name}",
+                },
+                "policy": {
+                    "installation": "AVAILABLE",
+                    "authentication": "ON_INSTALL",
+                },
+                "category": "Productivity",
+            }
+        ],
     }

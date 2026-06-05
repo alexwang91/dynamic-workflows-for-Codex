@@ -5,10 +5,12 @@ import sys
 from pathlib import Path
 
 from cdw.codex_mcp import FakeCodexAdapter
+from cdw.codex_command import resolve_codex_command
 from cdw.config import RuntimeConfig
 from cdw.live_smoke import run_live_smoke
 from cdw.planner import build_plan
 from cdw.plugin_package import package_plugin
+from cdw.plugin_package import package_repo_marketplace
 from cdw.resume import resume_run
 from cdw.runtime import execute_plan
 from cdw.skill import install_skill
@@ -26,23 +28,29 @@ def build_parser() -> argparse.ArgumentParser:
         command.add_argument("request")
         command.add_argument("--root", default=".")
         command.add_argument("--adapter", choices=("fake", "live"), default="fake")
+        command.add_argument("--codex-command")
         if name == "plan":
             command.add_argument("--save-spec")
     run_command = subparsers.add_parser("run")
     run_command.add_argument("workflow_spec")
     run_command.add_argument("--root", default=".")
     run_command.add_argument("--adapter", choices=("fake", "live"), default="fake")
+    run_command.add_argument("--codex-command")
     resume_command = subparsers.add_parser("resume")
     resume_command.add_argument("run_id")
     resume_command.add_argument("--root", default=".")
     resume_command.add_argument("--adapter", choices=("fake", "live"), default="fake")
+    resume_command.add_argument("--codex-command")
     install_skill_command = subparsers.add_parser("install-skill")
     install_skill_command.add_argument("--root", default=".")
     live_smoke_command = subparsers.add_parser("live-smoke")
     live_smoke_command.add_argument("--root", default=".")
     live_smoke_command.add_argument("--execute", action="store_true")
+    live_smoke_command.add_argument("--codex-command")
     package_plugin_command = subparsers.add_parser("package-plugin")
     package_plugin_command.add_argument("--output", default="plugins")
+    package_plugin_command.add_argument("--root", default=".")
+    package_plugin_command.add_argument("--repo-marketplace", action="store_true")
     return parser
 
 
@@ -54,16 +62,24 @@ def main(argv: list[str] | None = None) -> int:
         print(f"skill {path}")
         return 0
     if args.command == "live-smoke":
-        report = run_live_smoke(Path(args.root), execute=args.execute)
+        report = run_live_smoke(
+            Path(args.root),
+            execute=args.execute,
+            codex_command=args.codex_command,
+        )
         print(report.to_text())
         return 0 if report.ok else 1
     if args.command == "package-plugin":
+        if args.repo_marketplace:
+            path = package_repo_marketplace(Path(args.root))
+            print(f"marketplace {path}")
+            return 0
         path = package_plugin(Path(args.output))
         print(f"plugin {path}")
         return 0
     config = RuntimeConfig(root=Path(args.root), adapter=args.adapter)
     if args.command == "resume":
-        adapter = _build_adapter(config)
+        adapter = _build_adapter(config, codex_command=args.codex_command)
         try:
             state = resume_run(config.root, args.run_id, adapter)
         except RuntimeError as exc:
@@ -79,7 +95,7 @@ def main(argv: list[str] | None = None) -> int:
         path = save_workflow_spec(Path(args.save_spec), plan)
         print(f"spec {path}")
         return 0
-    adapter = _build_adapter(config)
+    adapter = _build_adapter(config, codex_command=args.codex_command)
     try:
         state = execute_plan(plan, config.root, adapter)
     except RuntimeError as exc:
@@ -89,9 +105,10 @@ def main(argv: list[str] | None = None) -> int:
     return 0
 
 
-def _build_adapter(config: RuntimeConfig):
+def _build_adapter(config: RuntimeConfig, codex_command: str | None = None):
     if config.adapter == "fake":
         return FakeCodexAdapter()
     from cdw.codex_mcp import LiveCodexAdapter
 
-    return LiveCodexAdapter(root=config.root)
+    resolution = resolve_codex_command(explicit=codex_command)
+    return LiveCodexAdapter(root=config.root, codex_command=resolution.command or "codex")
