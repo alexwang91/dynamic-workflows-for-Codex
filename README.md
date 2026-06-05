@@ -28,6 +28,9 @@ python -m cdw live-smoke
 python -m cdw package-plugin --output plugins
 ```
 
+For someone cloning this repo to use the dynamic workflow capability in their
+own Codex environment, see [docs/consumer-install.md](docs/consumer-install.md).
+
 ## What This Recreates
 
 This project recreates the architectural effect of Claude Dynamic Workflows:

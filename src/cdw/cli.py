@@ -10,6 +10,7 @@ from cdw.config import RuntimeConfig
 from cdw.live_smoke import run_live_smoke
 from cdw.planner import build_plan
 from cdw.plugin_package import package_plugin
+from cdw.plugin_package import package_repo_marketplace
 from cdw.resume import resume_run
 from cdw.runtime import execute_plan
 from cdw.skill import install_skill
@@ -48,6 +49,8 @@ def build_parser() -> argparse.ArgumentParser:
     live_smoke_command.add_argument("--codex-command")
     package_plugin_command = subparsers.add_parser("package-plugin")
     package_plugin_command.add_argument("--output", default="plugins")
+    package_plugin_command.add_argument("--root", default=".")
+    package_plugin_command.add_argument("--repo-marketplace", action="store_true")
     return parser
 
 
@@ -67,6 +70,10 @@ def main(argv: list[str] | None = None) -> int:
         print(report.to_text())
         return 0 if report.ok else 1
     if args.command == "package-plugin":
+        if args.repo_marketplace:
+            path = package_repo_marketplace(Path(args.root))
+            print(f"marketplace {path}")
+            return 0
         path = package_plugin(Path(args.output))
         print(f"plugin {path}")
         return 0

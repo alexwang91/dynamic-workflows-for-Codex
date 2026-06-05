@@ -141,3 +141,22 @@ def test_package_plugin_command_writes_package(tmp_path, capsys):
         / ".codex-plugin"
         / "plugin.json"
     ).exists()
+
+
+def test_package_plugin_command_can_write_repo_marketplace(tmp_path, capsys):
+    exit_code = main(["package-plugin", "--repo-marketplace", "--root", str(tmp_path)])
+
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert captured.out.strip() == (
+        f"marketplace {tmp_path / '.agents' / 'plugins' / 'marketplace.json'}"
+    )
+    assert (
+        tmp_path
+        / ".agents"
+        / "plugins"
+        / "plugins"
+        / "dynamic-workflows-for-codex"
+        / ".codex-plugin"
+        / "plugin.json"
+    ).exists()
