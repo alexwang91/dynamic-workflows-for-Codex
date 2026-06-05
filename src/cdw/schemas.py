@@ -38,6 +38,36 @@ class WorkflowPlan(BaseModel):
     max_iterations: int = Field(default=1, ge=1, le=10)
 
 
+class WorkflowSpecMetadata(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str = Field(default="Untitled workflow", min_length=1)
+    description: str = ""
+    created_by: str = Field(default="cdw", min_length=1)
+
+
+class WorkflowSpecConstraints(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    write_policy: Literal["read-only", "guarded", "write-heavy"] = "read-only"
+    allowed_paths: list[str] = Field(default_factory=list)
+    forbidden_paths: list[str] = Field(default_factory=list)
+    requires_human_approval: bool = False
+
+
+class WorkflowSpecBundle(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    schema_version: Literal["2"] = "2"
+    kind: Literal["codex.dynamic-workflow"] = "codex.dynamic-workflow"
+    metadata: WorkflowSpecMetadata = Field(default_factory=WorkflowSpecMetadata)
+    constraints: WorkflowSpecConstraints = Field(
+        default_factory=WorkflowSpecConstraints
+    )
+    acceptance_criteria: list[str] = Field(default_factory=list)
+    plan: WorkflowPlan
+
+
 class WorkerStatus(str, Enum):
     SUCCEEDED = "succeeded"
     FAILED = "failed"
