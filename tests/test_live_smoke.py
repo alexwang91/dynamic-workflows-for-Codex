@@ -1,3 +1,5 @@
+import subprocess
+
 from cdw.live_smoke import run_live_smoke
 
 
@@ -11,3 +13,25 @@ def test_live_smoke_reports_missing_codex_without_traceback(monkeypatch, tmp_pat
         check.name == "codex-command" and not check.ok for check in report.checks
     )
     assert "not found" in report.to_text().lower()
+
+
+def test_live_smoke_uses_explicit_codex_command(monkeypatch, tmp_path):
+    calls = {}
+
+    def fake_run(args, **kwargs):
+        calls["args"] = args
+        return subprocess.CompletedProcess(
+            args,
+            0,
+            stdout="codex-test 1.0",
+            stderr="",
+        )
+
+    monkeypatch.setattr("importlib.util.find_spec", lambda name: object())
+    monkeypatch.setattr("subprocess.run", fake_run)
+
+    report = run_live_smoke(tmp_path, codex_command="C:/tools/codex.exe")
+
+    assert report.ok
+    assert calls["args"][0] == "C:/tools/codex.exe"
+    assert "source=cli" in report.to_text()

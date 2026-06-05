@@ -1,4 +1,5 @@
 import json
+import subprocess
 
 from cdw.cli import build_parser, main
 
@@ -100,6 +101,32 @@ def test_live_smoke_command_reports_failure(tmp_path, capsys, monkeypatch):
     captured = capsys.readouterr()
     assert exit_code == 1
     assert "codex-command" in captured.out
+
+
+def test_live_smoke_command_accepts_codex_command(tmp_path, capsys, monkeypatch):
+    monkeypatch.setattr("importlib.util.find_spec", lambda name: object())
+    monkeypatch.setattr(
+        "subprocess.run",
+        lambda args, **kwargs: subprocess.CompletedProcess(
+            args,
+            0,
+            stdout="ok",
+            stderr="",
+        ),
+    )
+
+    exit_code = main(
+        [
+            "live-smoke",
+            "--root",
+            str(tmp_path),
+            "--codex-command",
+            "codex-test",
+        ]
+    )
+
+    assert exit_code == 0
+    assert "codex-test" in capsys.readouterr().out
 
 
 def test_package_plugin_command_writes_package(tmp_path, capsys):

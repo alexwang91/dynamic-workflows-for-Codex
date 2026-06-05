@@ -41,6 +41,7 @@ def build_parser() -> argparse.ArgumentParser:
     live_smoke_command = subparsers.add_parser("live-smoke")
     live_smoke_command.add_argument("--root", default=".")
     live_smoke_command.add_argument("--execute", action="store_true")
+    live_smoke_command.add_argument("--codex-command")
     package_plugin_command = subparsers.add_parser("package-plugin")
     package_plugin_command.add_argument("--output", default="plugins")
     return parser
@@ -54,7 +55,11 @@ def main(argv: list[str] | None = None) -> int:
         print(f"skill {path}")
         return 0
     if args.command == "live-smoke":
-        report = run_live_smoke(Path(args.root), execute=args.execute)
+        report = run_live_smoke(
+            Path(args.root),
+            execute=args.execute,
+            codex_command=args.codex_command,
+        )
         print(report.to_text())
         return 0 if report.ok else 1
     if args.command == "package-plugin":
