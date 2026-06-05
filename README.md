@@ -1,5 +1,10 @@
 # dynamic-workflows-for-Codex
 
+[![Release](https://img.shields.io/badge/release-v0.4-blue)](CHANGELOG.md)
+[![Python](https://img.shields.io/badge/python-3.10%2B-blue)](pyproject.toml)
+[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![Tests](https://img.shields.io/badge/tests-37%20passed-brightgreen)](tests)
+
 External orchestration runtime that recreates Claude-style dynamic workflows for Codex.
 
 The runtime generates typed workflow plans, executes specialist worker tasks through a swappable adapter, persists intermediate state under `.cdw/runs/`, verifies outputs before synthesis, and loops against explicit stop conditions.
@@ -15,17 +20,30 @@ cdw migrate "Rename User model to Account"
 
 ## Quickstart
 
+Install from a clone and run the deterministic fake adapter:
+
 ```bash
 python -m pip install -e ".[dev]"
 python -m pytest
 python -m cdw plan "Review this branch" --adapter fake
+```
+
+Run a reusable workflow spec:
+
+```bash
 python -m cdw plan "Review this branch" --save-spec .cdw/specs/review.workflow.json
 python -m cdw run .cdw/specs/review.workflow.json --adapter fake
 python -m cdw resume <run-id> --adapter fake
 python -m cdw migrate "Rename User model to Account" --adapter fake
+```
+
+Install or package the Codex entrypoints:
+
+```bash
 python -m cdw install-skill
 python -m cdw live-smoke
 python -m cdw package-plugin --output plugins
+python -m cdw package-plugin --repo-marketplace --root .
 ```
 
 For someone cloning this repo to use the dynamic workflow capability in their
