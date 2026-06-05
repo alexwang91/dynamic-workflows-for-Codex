@@ -23,3 +23,12 @@
 - `cdw resume <run-id>` reuses persisted worker and verifier results instead of starting over.
 - `cdw migrate` creates a guarded migration workflow with ownership boundaries and patch-review gates.
 - `cdw install-skill` writes a repo-local skill that delegates orchestration to `cdw`.
+
+## v0.3 Behavior
+
+- `cdw live-smoke` reports live-mode prerequisites without traceback or secret leakage.
+- `cdw live-smoke --execute` performs an actual minimal live worker run only after prerequisites pass.
+- Saved workflow specs use a v2 envelope with metadata, constraints, acceptance criteria, and embedded plan.
+- v1 plan-root workflow specs remain loadable for backward compatibility.
+- `cdw package-plugin` writes a local Codex plugin package with `.codex-plugin/plugin.json` and a packaged skill.
+- The plugin package validates with the plugin-creator validator.

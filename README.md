@@ -24,6 +24,8 @@ python -m cdw run .cdw/specs/review.workflow.json --adapter fake
 python -m cdw resume <run-id> --adapter fake
 python -m cdw migrate "Rename User model to Account" --adapter fake
 python -m cdw install-skill
+python -m cdw live-smoke
+python -m cdw package-plugin --output plugins
 ```
 
 ## What This Recreates
@@ -53,10 +55,20 @@ Each command creates a run directory:
 The state file is the source of truth for the workflow. It contains the plan,
 worker results, verifier results, and final synthesis.
 
-Workflow specs are JSON files validated as `WorkflowPlan` objects. Save them
-with `cdw plan --save-spec`, rerun them with `cdw run`, and resume partial
-runs from `.cdw/runs/<run-id>/state.json` with `cdw resume`.
+Workflow specs are v2 JSON envelopes with metadata, constraints, acceptance
+criteria, and an embedded `WorkflowPlan`. Save them with
+`cdw plan --save-spec`, rerun them with `cdw run`, and resume partial runs
+from `.cdw/runs/<run-id>/state.json` with `cdw resume`. Older v1 plan-root
+spec files remain loadable.
 
 `cdw install-skill` writes a repo-local Codex skill wrapper to
 `.agents/skills/dynamic-workflows-for-Codex/SKILL.md`. The skill delegates to
 the runtime; it does not own orchestration.
+
+`cdw live-smoke` diagnoses live-mode prerequisites without printing secrets.
+Use `cdw live-smoke --execute` only when live dependencies, a working `codex`
+CLI, and `OPENAI_API_KEY` are available.
+
+`cdw package-plugin --output plugins` writes a local Codex plugin package at
+`plugins/dynamic-workflows-for-codex/` with `.codex-plugin/plugin.json` and a
+packaged skill wrapper.
