@@ -27,6 +27,11 @@ must be honest about what it is about to run and what failed.
   failed `live-run` check instead of crashing.
 - A successful execute smoke should add an `ok` `live-run` check and preserve the
   returned run id.
+- `LiveCodexAdapter` must build the Codex MCP tool request through a parseable
+  contract object instead of relying only on free-form prose.
+- The generated instruction must still tell the coordinating agent to call the
+  Codex MCP `codex` tool exactly once with `prompt`, `cwd`, `sandbox`, and
+  `approval-policy`.
 - Unit tests must not require `openai`, `openai-agents`, an API key, or a real
   Codex CLI.
 
@@ -42,6 +47,7 @@ must be honest about what it is about to run and what failed.
 
 - `python -m pytest tests/test_live_smoke.py -v` proves the execute path uses the
   resolved Codex command and reports live-run failures.
+- `python -m pytest tests/test_codex_mcp.py -v` proves the MCP tool contract is
+  parseable and includes the exact execution arguments.
 - `python -m pytest -v` passes.
 - `python -m cdw live-smoke` still reports local environment blockers cleanly.
-

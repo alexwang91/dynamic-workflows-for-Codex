@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Make `cdw live-smoke --execute` use the same resolved Codex command it validated and return structured diagnostics when live execution fails.
+**Goal:** Make `cdw live-smoke --execute` use the same resolved Codex command it validated, return structured diagnostics when live execution fails, and make the live Codex MCP request contract parseable in tests.
 
-**Architecture:** Keep the change inside `src/cdw/live_smoke.py`. Treat `LiveCodexAdapter` as the execution boundary and improve only how `run_live_smoke` constructs it and records execution results.
+**Architecture:** Keep smoke diagnostics inside `src/cdw/live_smoke.py`. Keep live request shaping inside `src/cdw/codex_mcp.py` by adding a small contract builder that returns the Codex MCP tool name and arguments before rendering the coordinating-agent instruction.
 
 **Tech Stack:** Python 3.10+, pytest.
 
@@ -168,3 +168,77 @@ git add docs/superpowers/specs/2026-06-05-dynamic-workflows-for-Codex-v0.5-live-
 git commit -m "fix: harden live smoke execute contract"
 ```
 
+## Task 4: Make the Codex MCP Tool Contract Parseable
+
+**Files:**
+- Modify: `tests/test_codex_mcp.py`
+- Modify: `src/cdw/codex_mcp.py`
+
+- [ ] **Step 1: Write the failing test**
+
+Add this test to `tests/test_codex_mcp.py`:
+
+```python
+import json
+import re
+
+
+def test_live_adapter_instruction_contains_parseable_codex_tool_contract(tmp_path):
+    adapter = LiveCodexAdapter(
+        root=tmp_path,
+        sandbox="workspace-write",
+        approval_policy="never",
+    )
+
+    instruction = adapter._codex_mcp_instruction("Inspect the current branch")
+    match = re.search(r"```json\n(?P<json>.*?)\n```", instruction, re.DOTALL)
+
+    assert match is not None
+    assert json.loads(match.group("json")) == {
+        "tool": "codex",
+        "arguments": {
+            "prompt": "Inspect the current branch",
+            "cwd": str(tmp_path),
+            "sandbox": "workspace-write",
+            "approval-policy": "never",
+        },
+    }
+```
+
+- [ ] **Step 2: Run the test to verify it fails**
+
+Run: `python -m pytest tests/test_codex_mcp.py::test_live_adapter_instruction_contains_parseable_codex_tool_contract -v`
+
+Expected: FAIL because `_codex_mcp_instruction` currently emits prose bullets instead of a JSON contract block.
+
+- [ ] **Step 3: Write minimal implementation**
+
+Add `json` import and this helper to `LiveCodexAdapter`:
+
+```python
+def _codex_mcp_tool_contract(self, task_prompt: str) -> dict[str, object]:
+    return {
+        "tool": "codex",
+        "arguments": {
+            "prompt": task_prompt,
+            "cwd": str(Path(self.root)),
+            "sandbox": self.sandbox,
+            "approval-policy": self.approval_policy,
+        },
+    }
+```
+
+Render it in `_codex_mcp_instruction` with a fenced JSON block.
+
+- [ ] **Step 4: Run focused verification**
+
+Run: `python -m pytest tests/test_codex_mcp.py -v`
+
+Expected: PASS.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add docs/superpowers/specs/2026-06-05-dynamic-workflows-for-Codex-v0.5-live-execute-contract.md docs/superpowers/plans/2026-06-05-dynamic-workflows-for-Codex-v0.5-live-execute-contract.md tests/test_codex_mcp.py src/cdw/codex_mcp.py
+git commit -m "feat: add parseable codex mcp contract"
+```
