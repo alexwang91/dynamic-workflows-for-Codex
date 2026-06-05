@@ -63,6 +63,7 @@ class LiveCodexAdapter:
     sandbox: str = "workspace-write"
     approval_policy: str = "never"
     timeout_seconds: int = 360000
+    codex_command: str = "codex"
 
     def run_worker(self, work_unit: WorkUnit) -> WorkerResult:
         output = self._run_agent(
@@ -119,7 +120,7 @@ class LiveCodexAdapter:
     ) -> str:
         async with server_cls(
             name="Codex CLI",
-            params={"command": "codex", "args": ["mcp-server"]},
+            params={"command": self.codex_command, "args": ["mcp-server"]},
             client_session_timeout_seconds=self.timeout_seconds,
         ) as codex_mcp_server:
             agent = agent_cls(
