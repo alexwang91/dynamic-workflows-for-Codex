@@ -1,103 +1,145 @@
-# dynamic-workflows-for-Codex
+# Dynamic Workflows For Codex
 
 [![Release](https://img.shields.io/badge/release-v0.4-blue)](CHANGELOG.md)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](pyproject.toml)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Tests](https://img.shields.io/badge/tests-37%20passed-brightgreen)](tests)
 
-External orchestration runtime that recreates Claude-style dynamic workflows for Codex.
+External dynamic workflow runtime for Codex.
 
-The runtime generates typed workflow plans, executes specialist worker tasks through a swappable adapter, persists intermediate state under `.cdw/runs/`, verifies outputs before synthesis, and loops against explicit stop conditions.
+Not a prompt pack. Not a private Claude runtime clone. This is a small,
+inspectable runtime that gives Codex the architectural effect of dynamic
+workflows: task-specific plans, isolated workers, persisted state, verification
+gates, and synthesis from structured intermediate results.
 
-Core commands:
-
-```bash
-cdw plan "Review this branch"
-cdw review "Review this branch with specialist agents"
-cdw debug "This test fails 1 in 50 runs"
-cdw migrate "Rename User model to Account"
-```
+It is built so someone can clone this repo, install it into their own Codex
+environment, and run workflows with their own Codex account, API key, quota,
+and model access.
 
 ## Quickstart
 
-Install from a clone and run the deterministic fake adapter:
+Clone the repo and run deterministic fake mode:
 
 ```bash
+git clone <repo-url>
+cd dynamic-workflows-for-Codex
 python -m pip install -e ".[dev]"
 python -m pytest
-python -m cdw plan "Review this branch" --adapter fake
+python -m cdw review "Review this branch" --adapter fake
 ```
 
-Run a reusable workflow spec:
+Create and run a reusable workflow spec:
 
 ```bash
 python -m cdw plan "Review this branch" --save-spec .cdw/specs/review.workflow.json
 python -m cdw run .cdw/specs/review.workflow.json --adapter fake
 python -m cdw resume <run-id> --adapter fake
+```
+
+Create a guarded migration plan:
+
+```bash
 python -m cdw migrate "Rename User model to Account" --adapter fake
 ```
 
-Install or package the Codex entrypoints:
+## Install Into Codex
 
-```bash
-python -m cdw install-skill
-python -m cdw live-smoke
-python -m cdw package-plugin --output plugins
-python -m cdw package-plugin --repo-marketplace --root .
+This repo includes a cloneable Codex plugin marketplace:
+
+```text
+.agents/plugins/marketplace.json
+.agents/plugins/plugins/dynamic-workflows-for-codex/
 ```
 
-For someone cloning this repo to use the dynamic workflow capability in their
-own Codex environment, see [docs/consumer-install.md](docs/consumer-install.md).
+If your Codex install needs explicit marketplace registration:
 
-## What This Recreates
+```bash
+codex plugin marketplace add .agents/plugins
+```
 
-This project recreates the architectural effect of Claude Dynamic Workflows:
-task-specific harnesses, isolated workers, runtime-owned state, verification
-gates, and synthesis from structured intermediate results.
+Then enable `dynamic-workflows-for-codex` in your own Codex environment.
 
-It does not use Claude's private JavaScript workflow runtime or `ultracode`
-trigger.
+For the full consumer setup, read [docs/consumer-install.md](docs/consumer-install.md).
+
+## What You Get
+
+- `cdw plan`: create a typed workflow plan.
+- `cdw review`: fan out specialist review workers.
+- `cdw debug`: fan out hypothesis investigators.
+- `cdw migrate`: create guarded write-heavy migration plans.
+- `cdw run`: execute saved workflow specs.
+- `cdw resume`: continue an incomplete persisted run.
+- `cdw live-smoke`: diagnose live-mode prerequisites.
+- `cdw package-plugin`: generate Codex plugin packages.
+
+## How It Works
+
+The runtime owns the control plane:
+
+1. Build a typed `WorkflowPlan`.
+2. Persist state under `.cdw/runs/<run-id>/state.json`.
+3. Dispatch scoped workers through a swappable adapter.
+4. Persist worker results before verification.
+5. Verify results before synthesis.
+6. Synthesize from structured state, not chat history.
+
+Workflow specs are v2 JSON envelopes with metadata, constraints, acceptance
+criteria, and an embedded `WorkflowPlan`. Older v1 plan-root specs still load.
 
 ## Modes
 
-- `fake`: deterministic local worker adapter for development and tests.
-- `live`: uses the OpenAI Agents SDK to launch `codex mcp-server` and run
-  scoped Codex worker sessions. This requires the optional `[live]`
-  dependencies and a working local `codex` command.
+### Fake
 
-## Runtime Artifacts
+Fake mode is deterministic and needs no credentials:
 
-Each command creates a run directory:
-
-```text
-.cdw/runs/<run-id>/state.json
+```bash
+python -m cdw review "Review this branch" --adapter fake
 ```
 
-The state file is the source of truth for the workflow. It contains the plan,
-worker results, verifier results, and final synthesis.
+Use it for tests, demos, and local development.
 
-Workflow specs are v2 JSON envelopes with metadata, constraints, acceptance
-criteria, and an embedded `WorkflowPlan`. Save them with
-`cdw plan --save-spec`, rerun them with `cdw run`, and resume partial runs
-from `.cdw/runs/<run-id>/state.json` with `cdw resume`. Older v1 plan-root
-spec files remain loadable.
+### Live
 
-`cdw install-skill` writes a repo-local Codex skill wrapper to
-`.agents/skills/dynamic-workflows-for-Codex/SKILL.md`. The skill delegates to
-the runtime; it does not own orchestration.
+Live mode uses the OpenAI Agents SDK to launch `codex mcp-server` and run
+scoped Codex worker sessions.
 
-`cdw live-smoke` diagnoses live-mode prerequisites without printing secrets.
-Use `cdw live-smoke --execute` only when live dependencies, a working `codex`
-CLI, and `OPENAI_API_KEY` are available.
+```bash
+python -m pip install -e ".[live]"
+python -m cdw live-smoke
+python -m cdw live-smoke --execute
+```
 
-If the discovered `codex` command is not directly executable, pass an override:
+Live mode uses the user's own OpenAI/Codex authentication. This repo does not
+ship or require the author's API key.
+
+If your discovered `codex` command is not directly executable, pass an
+override:
 
 ```bash
 CDW_CODEX_COMMAND=/path/to/codex python -m cdw live-smoke
-python -m cdw live-smoke --codex-command /path/to/codex
 python -m cdw review "Review this branch" --adapter live --codex-command /path/to/codex
 ```
 
-`cdw package-plugin --output plugins` writes a local Codex plugin package at
-`plugins/dynamic-workflows-for-codex/` with `.codex-plugin/plugin.json` and a
-packaged skill wrapper.
+## Project Status
+
+Current release: `v0.4`.
+
+- v0.1: MVP runtime with plan/review/debug, fake adapter, live MCP boundary.
+- v0.2: workflow specs, resume, guarded migration, skill installer.
+- v0.3: live smoke diagnostics, v2 specs, plugin packaging.
+- v0.4: cloneable Codex marketplace, command overrides, consumer install docs.
+
+See [CHANGELOG.md](CHANGELOG.md) for details.
+
+## What This Is Not
+
+- Not Claude's private JavaScript workflow runtime.
+- Not the `ultracode` trigger.
+- Not a skill-only prompt library.
+- Not a shared API-key service.
+
+The plugin and skill are entrypoints. `cdw` owns orchestration.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
