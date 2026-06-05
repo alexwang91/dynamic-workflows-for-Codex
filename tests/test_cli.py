@@ -90,3 +90,27 @@ def test_install_skill_command_writes_repo_skill(tmp_path, capsys):
     assert exit_code == 0
     assert captured.out.strip() == f"skill {skill_path}"
     assert skill_path.exists()
+
+
+def test_live_smoke_command_reports_failure(tmp_path, capsys, monkeypatch):
+    monkeypatch.setattr("shutil.which", lambda command: None)
+
+    exit_code = main(["live-smoke", "--root", str(tmp_path)])
+
+    captured = capsys.readouterr()
+    assert exit_code == 1
+    assert "codex-command" in captured.out
+
+
+def test_package_plugin_command_writes_package(tmp_path, capsys):
+    exit_code = main(["package-plugin", "--output", str(tmp_path)])
+
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert captured.out.strip().startswith("plugin ")
+    assert (
+        tmp_path
+        / "dynamic-workflows-for-codex"
+        / ".codex-plugin"
+        / "plugin.json"
+    ).exists()
