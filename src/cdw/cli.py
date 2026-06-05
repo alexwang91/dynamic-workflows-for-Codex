@@ -8,6 +8,7 @@ from cdw.codex_mcp import FakeCodexAdapter
 from cdw.config import RuntimeConfig
 from cdw.live_smoke import run_live_smoke
 from cdw.planner import build_plan
+from cdw.plugin_package import package_plugin
 from cdw.resume import resume_run
 from cdw.runtime import execute_plan
 from cdw.skill import install_skill
@@ -40,6 +41,8 @@ def build_parser() -> argparse.ArgumentParser:
     live_smoke_command = subparsers.add_parser("live-smoke")
     live_smoke_command.add_argument("--root", default=".")
     live_smoke_command.add_argument("--execute", action="store_true")
+    package_plugin_command = subparsers.add_parser("package-plugin")
+    package_plugin_command.add_argument("--output", default="plugins")
     return parser
 
 
@@ -54,6 +57,10 @@ def main(argv: list[str] | None = None) -> int:
         report = run_live_smoke(Path(args.root), execute=args.execute)
         print(report.to_text())
         return 0 if report.ok else 1
+    if args.command == "package-plugin":
+        path = package_plugin(Path(args.output))
+        print(f"plugin {path}")
+        return 0
     config = RuntimeConfig(root=Path(args.root), adapter=args.adapter)
     if args.command == "resume":
         adapter = _build_adapter(config)

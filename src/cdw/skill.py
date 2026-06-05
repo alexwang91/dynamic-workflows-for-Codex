@@ -9,13 +9,13 @@ SKILL_NAME = "dynamic-workflows-for-Codex"
 def install_skill(root: Path) -> Path:
     path = root / ".agents" / "skills" / SKILL_NAME / "SKILL.md"
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(_skill_content(), encoding="utf-8")
+    path.write_text(build_skill_content(), encoding="utf-8")
     return path
 
 
-def _skill_content() -> str:
-    return """---
-name: dynamic-workflows-for-Codex
+def build_skill_content(skill_name: str = SKILL_NAME) -> str:
+    return f"""---
+name: {skill_name}
 description: Use when a Codex task needs an external dynamic workflow runtime, including multi-agent review, debugging, resumable workflow specs, or guarded migrations.
 ---
 
