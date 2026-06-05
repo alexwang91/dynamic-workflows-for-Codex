@@ -32,3 +32,10 @@
 - v1 plan-root workflow specs remain loadable for backward compatibility.
 - `cdw package-plugin` writes a local Codex plugin package with `.codex-plugin/plugin.json` and a packaged skill.
 - The plugin package validates with the plugin-creator validator.
+
+## v0.4 Behavior
+
+- Codex command resolution prefers `--codex-command`, then `CDW_CODEX_COMMAND`, then PATH.
+- `cdw live-smoke` reports the selected Codex command source.
+- `cdw live-smoke` gives an actionable override hint for WindowsApps access-denied failures.
+- Live adapter execution passes the resolved command to the Codex MCP stdio server.
