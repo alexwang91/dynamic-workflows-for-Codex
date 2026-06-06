@@ -2,6 +2,13 @@
 
 All notable changes to `dynamic-workflows-for-Codex` are documented here.
 
+## v0.7 - 2026-06-06
+
+- Hardened the packaged Codex skill with trigger routing, an operating loop, adapter policy, resume-first behavior, command map, and guardrails.
+- Updated repo-local plugin metadata to mention `cdw doctor`, `codex-cli`, and reusable workflow specs.
+- Added tests to keep generated skill content and repo-local packaged skill content in sync.
+- Bumped package and plugin metadata to `0.7.0`.
+
 ## v0.6 - 2026-06-06
 
 - Added v3 workflow spec envelopes with procedure graphs.

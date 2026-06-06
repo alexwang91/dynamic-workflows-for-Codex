@@ -43,27 +43,30 @@ def package_repo_marketplace(root: Path) -> Path:
 def _plugin_manifest() -> dict:
     return {
         "name": PLUGIN_NAME,
-        "version": "0.6.0",
-        "description": "External dynamic workflow runtime entrypoint for Codex.",
+        "version": "0.7.0",
+        "description": "Dynamic workflow runtime, doctor checks, and Codex CLI skill routing for Codex.",
         "author": {
             "name": "Local developer",
         },
         "skills": "./skills/",
-        "keywords": ["codex", "workflow", "agents", "review", "debug"],
+        "keywords": ["codex", "workflow", "agents", "review", "debug", "doctor"],
         "interface": {
             "displayName": "Dynamic Workflows for Codex",
-            "shortDescription": "Run resumable dynamic workflows through cdw.",
+            "shortDescription": "Route Codex tasks through cdw dynamic workflows.",
             "longDescription": (
-                "Packages a Codex skill wrapper that delegates complex review, "
-                "debugging, workflow specs, and guarded migrations to the cdw "
-                "external runtime."
+                "Packages a Codex skill wrapper that runs cdw doctor readiness "
+                "checks, routes real workers through the user's codex-cli login, "
+                "and delegates review, debugging, workflow specs, staged runs, "
+                "resume, and guarded migrations to the cdw external runtime."
             ),
             "developerName": "Local developer",
             "category": "Productivity",
             "capabilities": ["Workflow", "Review"],
             "defaultPrompt": [
+                "Run cdw doctor for this clone.",
                 "Review this branch with dynamic workflows.",
                 "Debug this flaky test with cdw.",
+                "Create and run a reusable workflow spec.",
                 "Create a guarded migration workflow.",
             ],
         },
