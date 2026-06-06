@@ -2,6 +2,14 @@
 
 All notable changes to `dynamic-workflows-for-Codex` are documented here.
 
+## v0.6 - 2026-06-06
+
+- Added v3 workflow spec envelopes with procedure graphs.
+- Added procedure stages with trigger phrases, gate policy, failure behavior, and final artifacts.
+- Added validation for unknown, duplicate, and unstaged work unit references.
+- Preserved v2 envelope and v1 plan-root compatibility, including default procedure backfill for legacy v2 specs.
+- Bumped package and plugin metadata to `0.6.0`.
+
 ## v0.5 - 2026-06-06
 
 - Added `--adapter codex-cli` to run workflow workers through the user's own logged-in `codex exec` CLI without importing OpenAI Agents SDK dependencies.

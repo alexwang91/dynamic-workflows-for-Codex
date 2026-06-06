@@ -14,7 +14,7 @@ def test_package_plugin_writes_manifest_and_skill(tmp_path):
 
     assert path == tmp_path / "dynamic-workflows-for-codex"
     assert manifest["name"] == "dynamic-workflows-for-codex"
-    assert manifest["version"] == "0.5.0"
+    assert manifest["version"] == "0.6.0"
     assert manifest["skills"] == "./skills/"
     assert "runtime owns orchestration" in content
 

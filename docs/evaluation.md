@@ -50,3 +50,11 @@
 - `--adapter codex-cli` runs workflow workers through the user's own `codex exec` login state without importing OpenAI Agents SDK dependencies.
 - `cdw doctor` checks local runtime readiness, `.cdw` writeability, Codex CLI resolution, `codex --version`, `codex login status`, `codex exec --help`, repo-local plugin packaging, and packaged skill presence.
 - `cdw doctor` does not run a real worker, consume model quota, or require `OPENAI_API_KEY`.
+
+## v0.6 Behavior
+
+- `save_workflow_spec` writes v3 workflow envelopes with a procedure graph.
+- Procedure graphs include triggers, ordered stages, stage gates, failure behavior, and final artifacts.
+- Procedure validation rejects unknown, duplicate, or unstaged work unit ids.
+- v2 workflow envelopes without `procedure` still load and receive a generated default procedure.
+- v1 plan-root workflow specs remain loadable for backward compatibility.
