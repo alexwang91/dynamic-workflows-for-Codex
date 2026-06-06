@@ -20,8 +20,12 @@ worker dispatch, verification, and synthesis.
 git clone <repo-url>
 cd dynamic-workflows-for-Codex
 python -m pip install -e ".[dev]"
+python -m cdw bootstrap
 python -m cdw doctor
 ```
+
+`bootstrap` refreshes the repo-local marketplace and plugin package, then prints
+the next commands for marketplace registration and verification.
 
 `doctor` checks local state writeability, the repo-local plugin package, the
 packaged skill, and the user's own Codex CLI. It does not run a real worker,
@@ -65,6 +69,7 @@ The repo includes a marketplace file and plugin package:
 When Codex needs an explicit marketplace registration, add the marketplace root:
 
 ```powershell
+python -m cdw bootstrap
 codex plugin marketplace add .agents/plugins
 ```
 

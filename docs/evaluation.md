@@ -69,3 +69,10 @@
 - The skill tells Codex to resume existing run ids before starting new workers.
 - The repo-local packaged skill matches `build_skill_content(skill_name="dynamic-workflows-for-codex")`.
 - Plugin metadata mentions `cdw doctor`, `codex-cli`, and workflow specs.
+
+## v0.8 Behavior
+
+- `cdw bootstrap` refreshes `.agents/plugins/marketplace.json` and the repo-local plugin package.
+- `cdw bootstrap` prints the next marketplace registration command and `python -m cdw doctor`.
+- Bootstrap does not modify global Codex configuration, run real workers, or require API keys.
+- Clone install docs put bootstrap before doctor.

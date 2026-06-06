@@ -2,6 +2,13 @@
 
 All notable changes to `dynamic-workflows-for-Codex` are documented here.
 
+## v0.8 - 2026-06-06
+
+- Added `cdw bootstrap` to refresh the repo-local plugin marketplace and package.
+- Bootstrap output now prints the next marketplace registration and doctor commands for clone users.
+- Updated clone install docs to run bootstrap before doctor.
+- Bumped package and plugin metadata to `0.8.0`.
+
 ## v0.7 - 2026-06-06
 
 - Hardened the packaged Codex skill with trigger routing, an operating loop, adapter policy, resume-first behavior, command map, and guardrails.

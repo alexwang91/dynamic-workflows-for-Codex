@@ -1,9 +1,9 @@
 # Dynamic Workflows For Codex
 
-[![Release](https://img.shields.io/badge/release-v0.7-blue)](CHANGELOG.md)
+[![Release](https://img.shields.io/badge/release-v0.8-blue)](CHANGELOG.md)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](pyproject.toml)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-62%20passed-brightgreen)](tests)
+[![Tests](https://img.shields.io/badge/tests-64%20passed-brightgreen)](tests)
 
 External dynamic workflow runtime for Codex.
 
@@ -26,6 +26,7 @@ git clone <repo-url>
 cd dynamic-workflows-for-Codex
 python -m pip install -e ".[dev]"
 python -m pytest
+python -m cdw bootstrap
 python -m cdw doctor
 python -m cdw review "Review this branch" --adapter fake
 ```
@@ -56,6 +57,7 @@ This repo includes a cloneable Codex plugin marketplace:
 If your Codex install needs explicit marketplace registration:
 
 ```bash
+python -m cdw bootstrap
 codex plugin marketplace add .agents/plugins
 ```
 
@@ -74,6 +76,7 @@ For the full consumer setup, read [docs/consumer-install.md](docs/consumer-insta
 - `cdw migrate`: create guarded write-heavy migration plans.
 - `cdw run`: execute saved workflow specs.
 - `cdw resume`: continue an incomplete persisted run.
+- `cdw bootstrap`: refresh repo-local plugin files and print install next steps.
 - `cdw doctor`: check clone readiness without running a real worker.
 - `cdw live-smoke`: diagnose live-mode prerequisites.
 - `cdw package-plugin`: generate Codex plugin packages.
@@ -155,7 +158,7 @@ python -m cdw review "Review this branch" --adapter live --codex-command /path/t
 
 ## Project Status
 
-Current release: `v0.7`.
+Current release: `v0.8`.
 
 - v0.1: MVP runtime with plan/review/debug, fake adapter, live MCP boundary.
 - v0.2: workflow specs, resume, guarded migration, skill installer.
@@ -167,6 +170,8 @@ Current release: `v0.7`.
   failure behavior, v2 backfill compatibility, and staged runtime execution.
 - v0.7: hardened plugin skill routing with doctor-first setup, adapter policy,
   resume-first behavior, workflow spec routing, and stronger guardrails.
+- v0.8: clone bootstrap command that refreshes repo-local plugin packaging and
+  prints marketplace registration plus doctor next steps.
 
 See [CHANGELOG.md](CHANGELOG.md) for details.
 

@@ -10,7 +10,7 @@ def test_build_parser_has_core_commands():
 
     subcommands = parser._subparsers._group_actions[0].choices
 
-    assert {"plan", "review", "debug", "doctor"}.issubset(subcommands)
+    assert {"plan", "review", "debug", "bootstrap", "doctor"}.issubset(subcommands)
 
 
 def test_plan_command_persists_state(tmp_path, capsys):
@@ -146,6 +146,19 @@ def test_install_skill_command_writes_repo_skill(tmp_path, capsys):
     assert exit_code == 0
     assert captured.out.strip() == f"skill {skill_path}"
     assert skill_path.exists()
+
+
+def test_bootstrap_command_prepares_repo_plugin(tmp_path, capsys):
+    exit_code = main(["bootstrap", "--root", str(tmp_path)])
+
+    captured = capsys.readouterr()
+
+    assert exit_code == 0
+    assert "marketplace " in captured.out
+    assert "plugin " in captured.out
+    assert "codex plugin marketplace add .agents/plugins" in captured.out
+    assert "python -m cdw doctor" in captured.out
+    assert (tmp_path / ".agents" / "plugins" / "marketplace.json").exists()
 
 
 def test_live_smoke_command_reports_failure(tmp_path, capsys, monkeypatch):
