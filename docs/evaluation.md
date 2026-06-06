@@ -58,3 +58,6 @@
 - Procedure validation rejects unknown, duplicate, or unstaged work unit ids.
 - v2 workflow envelopes without `procedure` still load and receive a generated default procedure.
 - v1 plan-root workflow specs remain loadable for backward compatibility.
+- `cdw run <workflow-spec>` executes staged procedure graphs and persists the procedure in run state.
+- Runtime stage gates support stop, continue, and require-human failure behavior.
+- `cdw resume <run-id>` preserves staged behavior when a run state contains a procedure.

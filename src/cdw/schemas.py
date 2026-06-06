@@ -163,6 +163,7 @@ class RunState(BaseModel):
     run_id: str = Field(min_length=1)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     plan: WorkflowPlan
+    procedure: WorkflowProcedure | None = None
     worker_results: list[WorkerResult] = Field(default_factory=list)
     verification_results: list[VerificationResult] = Field(default_factory=list)
     synthesis: SynthesisReport | None = None

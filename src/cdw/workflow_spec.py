@@ -15,7 +15,7 @@ from cdw.schemas import (
 
 def save_workflow_spec(path: Path, plan: WorkflowPlan) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
-    bundle = _bundle_for_plan(plan)
+    bundle = build_workflow_spec_bundle(plan)
     path.write_text(bundle.model_dump_json(indent=2), encoding="utf-8")
     return path
 
@@ -30,10 +30,10 @@ def load_workflow_spec_bundle(path: Path) -> WorkflowSpecBundle:
         bundle = WorkflowSpecBundle.model_validate(data)
         return _with_default_procedure(bundle)
     plan = WorkflowPlan.model_validate(data)
-    return _bundle_for_plan(plan)
+    return build_workflow_spec_bundle(plan)
 
 
-def _bundle_for_plan(plan: WorkflowPlan) -> WorkflowSpecBundle:
+def build_workflow_spec_bundle(plan: WorkflowPlan) -> WorkflowSpecBundle:
     return WorkflowSpecBundle(
         schema_version="3",
         metadata=WorkflowSpecMetadata(

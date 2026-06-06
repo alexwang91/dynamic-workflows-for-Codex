@@ -3,7 +3,7 @@
 [![Release](https://img.shields.io/badge/release-v0.6-blue)](CHANGELOG.md)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](pyproject.toml)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-56%20passed-brightgreen)](tests)
+[![Tests](https://img.shields.io/badge/tests-60%20passed-brightgreen)](tests)
 
 External dynamic workflow runtime for Codex.
 
@@ -88,9 +88,10 @@ The runtime owns the control plane:
 6. Synthesize from structured state, not chat history.
 
 Workflow specs are v3 JSON envelopes with metadata, constraints, acceptance
-criteria, a procedure graph, and an embedded `WorkflowPlan`. The procedure graph
-names workflow triggers, ordered stages, verification gates, failure behavior,
-and final artifacts. Older v2 envelopes and v1 plan-root specs still load.
+criteria, a procedure graph, and an embedded `WorkflowPlan`. The runtime uses
+that procedure graph for `cdw run`: ordered stages, verification gates, failure
+behavior, and final artifacts are part of execution, not just documentation.
+Older v2 envelopes and v1 plan-root specs still load.
 
 ## Modes
 
@@ -160,7 +161,7 @@ Current release: `v0.6`.
 - v0.5: Codex CLI adapter, dry live contract, Windows Codex CLI fallback,
   and clone-user `cdw doctor` diagnostics.
 - v0.6: v3 workflow specs with procedure graph stages, gates, triggers,
-  failure behavior, and v2 backfill compatibility.
+  failure behavior, v2 backfill compatibility, and staged runtime execution.
 
 See [CHANGELOG.md](CHANGELOG.md) for details.
 

@@ -6,6 +6,8 @@ All notable changes to `dynamic-workflows-for-Codex` are documented here.
 
 - Added v3 workflow spec envelopes with procedure graphs.
 - Added procedure stages with trigger phrases, gate policy, failure behavior, and final artifacts.
+- Added staged runtime execution for `cdw run <workflow-spec>`.
+- Persisted procedure graphs in run state so `resume` preserves staged behavior.
 - Added validation for unknown, duplicate, and unstaged work unit references.
 - Preserved v2 envelope and v1 plan-root compatibility, including default procedure backfill for legacy v2 specs.
 - Bumped package and plugin metadata to `0.6.0`.
