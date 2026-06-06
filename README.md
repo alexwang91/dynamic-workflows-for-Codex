@@ -1,9 +1,9 @@
 # Dynamic Workflows For Codex
 
-[![Release](https://img.shields.io/badge/release-v0.6-blue)](CHANGELOG.md)
+[![Release](https://img.shields.io/badge/release-v0.7-blue)](CHANGELOG.md)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](pyproject.toml)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-60%20passed-brightgreen)](tests)
+[![Tests](https://img.shields.io/badge/tests-62%20passed-brightgreen)](tests)
 
 External dynamic workflow runtime for Codex.
 
@@ -60,6 +60,9 @@ codex plugin marketplace add .agents/plugins
 ```
 
 Then enable `dynamic-workflows-for-codex` in your own Codex environment.
+The packaged skill now includes trigger routing, a doctor-first readiness loop,
+adapter policy, resume-first behavior, and guardrails against ad hoc prompt
+orchestration.
 
 For the full consumer setup, read [docs/consumer-install.md](docs/consumer-install.md).
 
@@ -152,7 +155,7 @@ python -m cdw review "Review this branch" --adapter live --codex-command /path/t
 
 ## Project Status
 
-Current release: `v0.6`.
+Current release: `v0.7`.
 
 - v0.1: MVP runtime with plan/review/debug, fake adapter, live MCP boundary.
 - v0.2: workflow specs, resume, guarded migration, skill installer.
@@ -162,6 +165,8 @@ Current release: `v0.6`.
   and clone-user `cdw doctor` diagnostics.
 - v0.6: v3 workflow specs with procedure graph stages, gates, triggers,
   failure behavior, v2 backfill compatibility, and staged runtime execution.
+- v0.7: hardened plugin skill routing with doctor-first setup, adapter policy,
+  resume-first behavior, workflow spec routing, and stronger guardrails.
 
 See [CHANGELOG.md](CHANGELOG.md) for details.
 

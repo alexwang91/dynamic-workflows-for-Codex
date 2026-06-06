@@ -1,6 +1,8 @@
 import json
 
+from cdw.plugin_package import PLUGIN_NAME
 from cdw.plugin_package import package_plugin, package_repo_marketplace
+from cdw.skill import build_skill_content
 
 
 def test_package_plugin_writes_manifest_and_skill(tmp_path):
@@ -14,9 +16,13 @@ def test_package_plugin_writes_manifest_and_skill(tmp_path):
 
     assert path == tmp_path / "dynamic-workflows-for-codex"
     assert manifest["name"] == "dynamic-workflows-for-codex"
-    assert manifest["version"] == "0.6.0"
+    assert manifest["version"] == "0.7.0"
     assert manifest["skills"] == "./skills/"
+    assert "doctor" in manifest["interface"]["longDescription"]
+    assert "codex-cli" in manifest["interface"]["longDescription"]
+    assert "workflow specs" in manifest["interface"]["longDescription"]
     assert "runtime owns orchestration" in content
+    assert "## Trigger Routing" in content
 
 
 def test_package_repo_marketplace_writes_marketplace_and_plugin(tmp_path):
@@ -38,3 +44,15 @@ def test_package_repo_marketplace_writes_marketplace_and_plugin(tmp_path):
         "./plugins/dynamic-workflows-for-codex"
     )
     assert (plugin_path / ".codex-plugin" / "plugin.json").exists()
+
+
+def test_repo_local_plugin_skill_matches_generator():
+    skill_path = (
+        ".agents/plugins/plugins/dynamic-workflows-for-codex/skills/"
+        "dynamic-workflows-for-codex/SKILL.md"
+    )
+
+    with open(skill_path, encoding="utf-8") as handle:
+        content = handle.read()
+
+    assert content == build_skill_content(skill_name=PLUGIN_NAME)

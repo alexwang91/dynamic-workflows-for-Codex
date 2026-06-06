@@ -61,3 +61,11 @@
 - `cdw run <workflow-spec>` executes staged procedure graphs and persists the procedure in run state.
 - Runtime stage gates support stop, continue, and require-human failure behavior.
 - `cdw resume <run-id>` preserves staged behavior when a run state contains a procedure.
+
+## v0.7 Behavior
+
+- The generated skill includes trigger routing for review, debug, migration, reusable specs, resume, and clone readiness checks.
+- The skill defines a doctor-first operating loop and adapter policy that prefers `--adapter codex-cli` for real workflows.
+- The skill tells Codex to resume existing run ids before starting new workers.
+- The repo-local packaged skill matches `build_skill_content(skill_name="dynamic-workflows-for-codex")`.
+- Plugin metadata mentions `cdw doctor`, `codex-cli`, and workflow specs.

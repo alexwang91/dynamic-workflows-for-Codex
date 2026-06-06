@@ -16,14 +16,29 @@ def install_skill(root: Path) -> Path:
 def build_skill_content(skill_name: str = SKILL_NAME) -> str:
     return f"""---
 name: {skill_name}
-description: Use when a Codex task needs an external dynamic workflow runtime, including multi-agent review, debugging, resumable workflow specs, or guarded migrations.
+description: Use when a Codex task needs dynamic workflow orchestration for branch review, debugging, resumable workflow specs, guarded migrations, staged procedure execution, or clone-user readiness checks.
 ---
 
 # Dynamic Workflows For Codex
 
 Use the `cdw` runtime. The runtime owns orchestration, state, worker dispatch, verification, and synthesis.
 
-## First Check
+## Trigger Routing
+
+Use this skill when the user asks for any of these:
+
+- Branch or PR review with multiple specialist perspectives.
+- Debugging that needs parallel hypotheses or repeatable investigation.
+- Guarded migrations, write-heavy refactors, or ownership-bounded changes.
+- Reusable workflow specs, staged procedure graphs, or resumable runs.
+- Clone/install readiness checks for this plugin or runtime.
+
+Route setup and broken-environment reports to `cdw doctor --root <repo>`.
+Route existing run ids to `cdw resume <run-id>` before starting new work.
+Route reusable multi-step work through `cdw plan --save-spec` followed by
+`cdw run <workflow-spec>`.
+
+## Operating Loop
 
 Run `cdw doctor --root <repo>` before real workflows. It verifies local state
 writeability, the repo-local plugin package, the packaged skill, and the user's
@@ -33,23 +48,55 @@ API key.
 If `codex` is not on PATH, rerun doctor with `--codex-command <path>` or set
 `CDW_CODEX_COMMAND`.
 
-## Commands
+For multi-step work, prefer a saved workflow spec:
+
+1. Run `cdw plan "<request>" --save-spec .cdw/specs/<name>.workflow.json`.
+2. Run `cdw run .cdw/specs/<name>.workflow.json --adapter codex-cli`.
+3. Report the run id and state path under `.cdw/runs/<run-id>/state.json`.
+4. If interrupted or partially complete, resume the same run id.
+
+For direct task-specific workflows, use `review`, `debug`, or `migrate` with
+the same adapter policy below.
+
+## Adapter Policy
+
+- Use `--adapter codex-cli` for real clone-and-use workflows. It shells out to
+  the user's own `codex exec` login state.
+- Use `--adapter fake` for deterministic tests, demos, and documentation
+  examples.
+- Use `--adapter live` only when explicitly testing the optional OpenAI Agents
+  SDK / Codex MCP path.
+
+## Resume First
+
+If the user gives a run id, mentions an interrupted workflow, or asks to
+continue previous dynamic workflow work, run:
+
+```bash
+cdw resume <run-id> --adapter codex-cli
+```
+
+Do this before creating a new spec or starting new workers. The runtime persists
+worker results, verifier results, synthesis, and staged procedure state.
+
+## Command Map
 
 - Run `cdw plan "<request>" --save-spec <file>` to create a reusable workflow spec.
 - Run `cdw review "<request>" --adapter codex-cli` for a real review workflow through the user's logged-in Codex CLI.
+- Run `cdw debug "<request>" --adapter codex-cli` for hypothesis-driven debugging.
 - Run `cdw run <workflow-spec> --adapter codex-cli` to execute a saved workflow with Codex CLI workers.
 - Run `cdw resume <run-id> --adapter codex-cli` to continue a partial run.
 - Run `cdw migrate "<request>" --adapter codex-cli` for guarded migration planning.
+- Run `cdw package-plugin --repo-marketplace --root <repo>` after packaging changes.
 - Use `--adapter fake` for deterministic tests and demos.
 
-## Authentication
+## Guardrails
 
-Prefer `--adapter codex-cli` for clone-and-use workflows. It shells out to the
-user's own `codex exec` login state. Do not ask for or assume the project
-author's API key.
-
-Use `live-smoke` only when explicitly testing the optional OpenAI Agents SDK
-live adapter.
-
-Do not replace the runtime with free-form prompt orchestration.
+- Do not ask for or assume the project author's API key.
+- Do not replace the runtime with free-form prompt orchestration.
+- Do not run real workers until `cdw doctor` passes or the user explicitly
+  accepts the local readiness failure.
+- Do not use `live-smoke --execute` unless the user explicitly wants the
+  optional Agents SDK live path.
+- Keep `.cdw/` local. It stores workflow specs and run state, not secrets.
 """
