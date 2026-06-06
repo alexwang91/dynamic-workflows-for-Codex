@@ -1,3 +1,4 @@
+import builtins
 import json
 import subprocess
 
@@ -9,7 +10,7 @@ def test_build_parser_has_core_commands():
 
     subcommands = parser._subparsers._group_actions[0].choices
 
-    assert {"plan", "review", "debug"}.issubset(subcommands)
+    assert {"plan", "review", "debug", "doctor"}.issubset(subcommands)
 
 
 def test_plan_command_persists_state(tmp_path, capsys):
@@ -32,7 +33,16 @@ def test_plan_command_persists_state(tmp_path, capsys):
     assert data["plan"]["command"] == "plan"
 
 
-def test_live_adapter_dependency_error_is_user_facing(tmp_path, capsys):
+def test_live_adapter_dependency_error_is_user_facing(tmp_path, capsys, monkeypatch):
+    real_import = builtins.__import__
+
+    def fake_import(name, *args, **kwargs):
+        if name == "agents":
+            raise ImportError("missing agents")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", fake_import)
+
     exit_code = main(
         ["plan", "Review branch", "--root", str(tmp_path), "--adapter", "live"]
     )
@@ -41,6 +51,46 @@ def test_live_adapter_dependency_error_is_user_facing(tmp_path, capsys):
 
     assert exit_code == 1
     assert "openai-agents" in captured.err
+
+
+def test_codex_cli_adapter_runs_without_openai_agents(
+    tmp_path,
+    capsys,
+    monkeypatch,
+):
+    real_import = builtins.__import__
+
+    def fake_import(name, *args, **kwargs):
+        if name == "agents":
+            raise ImportError("agents should not be imported")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", fake_import)
+    monkeypatch.setattr(
+        "subprocess.run",
+        lambda args, **kwargs: subprocess.CompletedProcess(
+            args,
+            0,
+            stdout="PASSED\ncodex cli output",
+            stderr="",
+        ),
+    )
+
+    exit_code = main(
+        [
+            "plan",
+            "Review branch",
+            "--root",
+            str(tmp_path),
+            "--adapter",
+            "codex-cli",
+            "--codex-command",
+            "codex-test",
+        ]
+    )
+
+    assert exit_code == 0
+    assert capsys.readouterr().out.startswith("run ")
 
 
 def test_plan_can_save_workflow_spec(tmp_path):
@@ -103,6 +153,33 @@ def test_live_smoke_command_reports_failure(tmp_path, capsys, monkeypatch):
     assert "codex-command" in captured.out
 
 
+def test_doctor_command_reports_status(tmp_path, capsys, monkeypatch):
+    monkeypatch.setattr(
+        "subprocess.run",
+        lambda args, **kwargs: subprocess.CompletedProcess(
+            args,
+            0,
+            stdout="ok",
+            stderr="",
+        ),
+    )
+
+    exit_code = main(
+        [
+            "doctor",
+            "--root",
+            str(tmp_path),
+            "--codex-command",
+            "codex-test",
+        ]
+    )
+
+    captured = capsys.readouterr()
+    assert exit_code == 1
+    assert "codex-command" in captured.out
+    assert "plugin-package" in captured.out
+
+
 def test_live_smoke_command_accepts_codex_command(tmp_path, capsys, monkeypatch):
     monkeypatch.setattr("importlib.util.find_spec", lambda name: object())
     monkeypatch.setattr(
@@ -127,6 +204,29 @@ def test_live_smoke_command_accepts_codex_command(tmp_path, capsys, monkeypatch)
 
     assert exit_code == 0
     assert "codex-test" in capsys.readouterr().out
+
+
+def test_live_smoke_dry_contract_prints_json_without_preflight(
+    tmp_path,
+    capsys,
+    monkeypatch,
+):
+    def fail_find_spec(name):
+        raise AssertionError("dry contract must not check imports")
+
+    def fail_run(args, **kwargs):
+        raise AssertionError("dry contract must not execute subprocesses")
+
+    monkeypatch.setattr("importlib.util.find_spec", fail_find_spec)
+    monkeypatch.setattr("subprocess.run", fail_run)
+
+    exit_code = main(["live-smoke", "--root", str(tmp_path), "--dry-contract"])
+
+    captured = capsys.readouterr()
+    data = json.loads(captured.out)
+    assert exit_code == 0
+    assert data["tool"] == "codex"
+    assert data["arguments"]["cwd"] == str(tmp_path)
 
 
 def test_package_plugin_command_writes_package(tmp_path, capsys):

@@ -2,6 +2,15 @@
 
 All notable changes to `dynamic-workflows-for-Codex` are documented here.
 
+## v0.5 - 2026-06-06
+
+- Added `--adapter codex-cli` to run workflow workers through the user's own logged-in `codex exec` CLI without importing OpenAI Agents SDK dependencies.
+- Added `cdw doctor` clone-readiness diagnostics for local state, Codex CLI resolution, Codex login status, plugin package presence, and packaged skill presence.
+- Added `cdw live-smoke --dry-contract` to print a parseable Codex MCP tool contract without live preflight checks.
+- Hardened `cdw live-smoke --execute` so it reuses the validated Codex command and reports live runtime exceptions as check results.
+- On Windows, command resolution now skips inaccessible WindowsApps OpenAI.Codex package resources when the user-level Codex CLI exists.
+- Bumped package and plugin metadata to `0.5.0`.
+
 ## v0.4 - 2026-06-05
 
 - Added cloneable repo-local Codex plugin marketplace under `.agents/plugins/`.

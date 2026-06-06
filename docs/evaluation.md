@@ -39,3 +39,14 @@
 - `cdw live-smoke` reports the selected Codex command source.
 - `cdw live-smoke` gives an actionable override hint for WindowsApps access-denied failures.
 - Live adapter execution passes the resolved command to the Codex MCP stdio server.
+
+## v0.5 Behavior
+
+- `cdw live-smoke --execute` uses the same resolved Codex command that preflight validated.
+- `cdw live-smoke --execute` reports live execution exceptions as a `live-run` check.
+- Live adapter instructions include a parseable Codex MCP tool contract.
+- `cdw live-smoke --dry-contract` prints the live-smoke Codex MCP tool contract without live preflight checks.
+- On Windows, Codex command resolution skips the inaccessible WindowsApps OpenAI.Codex package resource when the user-level Codex CLI exists.
+- `--adapter codex-cli` runs workflow workers through the user's own `codex exec` login state without importing OpenAI Agents SDK dependencies.
+- `cdw doctor` checks local runtime readiness, `.cdw` writeability, Codex CLI resolution, `codex --version`, `codex login status`, `codex exec --help`, repo-local plugin packaging, and packaged skill presence.
+- `cdw doctor` does not run a real worker, consume model quota, or require `OPENAI_API_KEY`.

@@ -1,4 +1,6 @@
 import builtins
+import json
+import re
 import sys
 import types
 from types import SimpleNamespace
@@ -7,6 +9,12 @@ import pytest
 
 from cdw.codex_mcp import LiveCodexAdapter
 from cdw.planner import build_plan
+
+
+def _codex_contract_from_instruction(instruction):
+    match = re.search(r"```json\n(?P<json>.*?)\n```", instruction, re.DOTALL)
+    assert match is not None
+    return json.loads(match.group("json"))
 
 
 def test_live_adapter_has_clear_missing_dependency_error(monkeypatch):
@@ -69,7 +77,9 @@ def test_live_adapter_runs_worker_through_codex_mcp(monkeypatch, tmp_path):
     assert calls["server_params"] == {"command": "codex", "args": ["mcp-server"]}
     assert calls["agent_name"] == "Codex Worker"
     assert "Create a workflow plan for: Review branch" in calls["runner_prompt"]
-    assert str(tmp_path) in calls["runner_prompt"]
+    assert _codex_contract_from_instruction(calls["runner_prompt"])["arguments"][
+        "cwd"
+    ] == str(tmp_path)
     assert result.status == "succeeded"
     assert result.raw_output == "worker found evidence"
 
@@ -113,4 +123,24 @@ def test_live_adapter_uses_configured_codex_command(monkeypatch, tmp_path):
     assert calls["server_params"] == {
         "command": "codex-test",
         "args": ["mcp-server"],
+    }
+
+
+def test_live_adapter_instruction_contains_parseable_codex_tool_contract(tmp_path):
+    adapter = LiveCodexAdapter(
+        root=tmp_path,
+        sandbox="workspace-write",
+        approval_policy="never",
+    )
+
+    instruction = adapter._codex_mcp_instruction("Inspect the current branch")
+
+    assert _codex_contract_from_instruction(instruction) == {
+        "tool": "codex",
+        "arguments": {
+            "prompt": "Inspect the current branch",
+            "cwd": str(tmp_path),
+            "sandbox": "workspace-write",
+            "approval-policy": "never",
+        },
     }

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Protocol
@@ -136,14 +137,30 @@ class LiveCodexAdapter:
             return str(getattr(result, "final_output", result))
 
     def _codex_mcp_instruction(self, task_prompt: str) -> str:
+        contract = json.dumps(
+            self._codex_mcp_tool_contract(task_prompt),
+            ensure_ascii=False,
+            indent=2,
+        )
         return (
-            "Call the Codex MCP `codex` tool with these arguments:\n"
-            f"- prompt: {task_prompt}\n"
-            f"- cwd: {Path(self.root)}\n"
-            f"- sandbox: {self.sandbox}\n"
-            f"- approval-policy: {self.approval_policy}\n"
+            "Call the Codex MCP `codex` tool exactly once using this JSON contract:\n"
+            "```json\n"
+            f"{contract}\n"
+            "```\n"
+            "Do not change any contract field or argument value.\n"
             "After the tool returns, output only the Codex result content."
         )
+
+    def _codex_mcp_tool_contract(self, task_prompt: str) -> dict[str, object]:
+        return {
+            "tool": "codex",
+            "arguments": {
+                "prompt": task_prompt,
+                "cwd": str(Path(self.root)),
+                "sandbox": self.sandbox,
+                "approval-policy": self.approval_policy,
+            },
+        }
 
     def _worker_task_prompt(self, work_unit: WorkUnit) -> str:
         return (

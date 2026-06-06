@@ -1,7 +1,8 @@
 # Consumer Install
 
 This repo is meant to give another Codex user dynamic workflow capability with
-their own Codex installation, account, API key, subscription, and model quota.
+their own Codex installation, account, login state, API key, subscription, and
+model quota.
 It does not ship or require the project author's API key.
 
 ## What Gets Installed
@@ -18,16 +19,20 @@ worker dispatch, verification, and synthesis.
 ```powershell
 git clone <repo-url>
 cd dynamic-workflows-for-Codex
-python -m pip install -e ".[live]"
-python -m cdw live-smoke
+python -m pip install -e ".[dev]"
+python -m cdw doctor
 ```
 
-If `live-smoke` reports that the discovered `codex` command is not directly
-executable, point `cdw` at the user's own Codex CLI:
+`doctor` checks local state writeability, the repo-local plugin package, the
+packaged skill, and the user's own Codex CLI. It does not run a real worker,
+consume model quota, or require the project author's API key.
+
+If `doctor` reports that the discovered `codex` command is missing or not
+directly executable, point `cdw` at the user's own Codex CLI:
 
 ```powershell
 $env:CDW_CODEX_COMMAND = "C:\path\to\codex.exe"
-python -m cdw live-smoke
+python -m cdw doctor
 ```
 
 For fake-mode development and tests, live dependencies and keys are not needed:
@@ -37,6 +42,16 @@ python -m pip install -e ".[dev]"
 python -m pytest
 python -m cdw review "Review this branch" --adapter fake
 ```
+
+For the closest clone-and-use path, use the user's logged-in Codex CLI:
+
+```powershell
+codex login status
+python -m cdw review "Review this branch" --adapter codex-cli
+```
+
+`--adapter codex-cli` shells out to the user's own `codex exec`. It does not
+need this repo to know or store the user's API key.
 
 ## Add The Plugin Marketplace To Codex
 
@@ -62,16 +77,33 @@ From the cloned repo:
 
 ```powershell
 python -m cdw plan "Review this branch" --save-spec .cdw/specs/review.workflow.json
+python -m cdw run .cdw/specs/review.workflow.json --adapter codex-cli
+python -m cdw migrate "Rename User model to Account" --adapter codex-cli
+```
+
+Use fake mode for deterministic tests and demos:
+
+```powershell
 python -m cdw run .cdw/specs/review.workflow.json --adapter fake
 python -m cdw migrate "Rename User model to Account" --adapter fake
 ```
 
-For live mode, the user must provide their own OpenAI/Codex authentication:
+## Optional Live Adapter
+
+The default real clone-and-use path is `--adapter codex-cli`. Live mode is an
+optional OpenAI Agents SDK path for testing the Codex MCP boundary:
 
 ```powershell
+python -m pip install -e ".[live]"
+python -m cdw live-smoke --dry-contract
+python -m cdw live-smoke
 $env:OPENAI_API_KEY = "<your-openai-api-key>"
 python -m cdw live-smoke --execute
 python -m cdw review "Review this branch" --adapter live
 ```
+
+`live-smoke --dry-contract` prints the Codex MCP tool contract that would be
+used for the live smoke worker. It does not require `OPENAI_API_KEY`, the
+OpenAI Agents SDK, or a working `codex` command.
 
 Do not commit secrets. `.cdw/` is ignored and stores local run state only.

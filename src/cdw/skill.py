@@ -23,12 +23,33 @@ description: Use when a Codex task needs an external dynamic workflow runtime, i
 
 Use the `cdw` runtime. The runtime owns orchestration, state, worker dispatch, verification, and synthesis.
 
+## First Check
+
+Run `cdw doctor --root <repo>` before real workflows. It verifies local state
+writeability, the repo-local plugin package, the packaged skill, and the user's
+own Codex CLI without running a real worker or requiring the project author's
+API key.
+
+If `codex` is not on PATH, rerun doctor with `--codex-command <path>` or set
+`CDW_CODEX_COMMAND`.
+
 ## Commands
 
 - Run `cdw plan "<request>" --save-spec <file>` to create a reusable workflow spec.
-- Run `cdw run <workflow-spec>` to execute a saved workflow.
-- Run `cdw resume <run-id>` to continue a partial run.
-- Run `cdw migrate "<request>"` for guarded migration planning.
+- Run `cdw review "<request>" --adapter codex-cli` for a real review workflow through the user's logged-in Codex CLI.
+- Run `cdw run <workflow-spec> --adapter codex-cli` to execute a saved workflow with Codex CLI workers.
+- Run `cdw resume <run-id> --adapter codex-cli` to continue a partial run.
+- Run `cdw migrate "<request>" --adapter codex-cli` for guarded migration planning.
+- Use `--adapter fake` for deterministic tests and demos.
+
+## Authentication
+
+Prefer `--adapter codex-cli` for clone-and-use workflows. It shells out to the
+user's own `codex exec` login state. Do not ask for or assume the project
+author's API key.
+
+Use `live-smoke` only when explicitly testing the optional OpenAI Agents SDK
+live adapter.
 
 Do not replace the runtime with free-form prompt orchestration.
 """

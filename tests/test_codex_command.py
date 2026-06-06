@@ -29,6 +29,27 @@ def test_resolve_codex_command_falls_back_to_path(monkeypatch):
     assert resolution.source == "path"
 
 
+def test_resolve_codex_command_skips_windowsapps_package_when_user_cli_exists(
+    monkeypatch,
+    tmp_path,
+):
+    user_cli = tmp_path / "OpenAI" / "Codex" / "bin" / "codex.exe"
+    user_cli.parent.mkdir(parents=True)
+    user_cli.write_text("", encoding="utf-8")
+    monkeypatch.setattr(
+        "shutil.which",
+        lambda command: (
+            "C:/Program Files/WindowsApps/OpenAI.Codex_1.0.0.0_x64/app/"
+            "resources/codex.exe"
+        ),
+    )
+
+    resolution = resolve_codex_command(env={"LOCALAPPDATA": str(tmp_path)})
+
+    assert resolution.command == str(user_cli)
+    assert resolution.source == "path"
+
+
 def test_resolve_codex_command_reports_missing(monkeypatch):
     monkeypatch.setattr("shutil.which", lambda command: None)
 
