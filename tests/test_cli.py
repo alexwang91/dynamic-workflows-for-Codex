@@ -10,7 +10,7 @@ def test_build_parser_has_core_commands():
 
     subcommands = parser._subparsers._group_actions[0].choices
 
-    assert {"plan", "review", "debug"}.issubset(subcommands)
+    assert {"plan", "review", "debug", "doctor"}.issubset(subcommands)
 
 
 def test_plan_command_persists_state(tmp_path, capsys):
@@ -151,6 +151,33 @@ def test_live_smoke_command_reports_failure(tmp_path, capsys, monkeypatch):
     captured = capsys.readouterr()
     assert exit_code == 1
     assert "codex-command" in captured.out
+
+
+def test_doctor_command_reports_status(tmp_path, capsys, monkeypatch):
+    monkeypatch.setattr(
+        "subprocess.run",
+        lambda args, **kwargs: subprocess.CompletedProcess(
+            args,
+            0,
+            stdout="ok",
+            stderr="",
+        ),
+    )
+
+    exit_code = main(
+        [
+            "doctor",
+            "--root",
+            str(tmp_path),
+            "--codex-command",
+            "codex-test",
+        ]
+    )
+
+    captured = capsys.readouterr()
+    assert exit_code == 1
+    assert "codex-command" in captured.out
+    assert "plugin-package" in captured.out
 
 
 def test_live_smoke_command_accepts_codex_command(tmp_path, capsys, monkeypatch):

@@ -46,6 +46,9 @@ def build_parser() -> argparse.ArgumentParser:
     resume_command.add_argument("--codex-command")
     install_skill_command = subparsers.add_parser("install-skill")
     install_skill_command.add_argument("--root", default=".")
+    doctor_command = subparsers.add_parser("doctor")
+    doctor_command.add_argument("--root", default=".")
+    doctor_command.add_argument("--codex-command")
     live_smoke_command = subparsers.add_parser("live-smoke")
     live_smoke_command.add_argument("--root", default=".")
     live_smoke_command.add_argument("--execute", action="store_true")
@@ -65,6 +68,12 @@ def main(argv: list[str] | None = None) -> int:
         path = install_skill(Path(args.root))
         print(f"skill {path}")
         return 0
+    if args.command == "doctor":
+        from cdw.doctor import run_doctor
+
+        report = run_doctor(Path(args.root), codex_command=args.codex_command)
+        print(report.to_text())
+        return 0 if report.ok else 1
     if args.command == "live-smoke":
         if args.dry_contract:
             print(json.dumps(build_live_smoke_contract(Path(args.root)), indent=2))

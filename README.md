@@ -1,9 +1,9 @@
 # Dynamic Workflows For Codex
 
-[![Release](https://img.shields.io/badge/release-v0.4-blue)](CHANGELOG.md)
+[![Release](https://img.shields.io/badge/release-v0.5-blue)](CHANGELOG.md)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](pyproject.toml)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-37%20passed-brightgreen)](tests)
+[![Tests](https://img.shields.io/badge/tests-51%20passed-brightgreen)](tests)
 
 External dynamic workflow runtime for Codex.
 
@@ -18,13 +18,15 @@ key, quota, and model access.
 
 ## Quickstart
 
-Clone the repo and run deterministic fake mode:
+Clone the repo, run tests, check real Codex readiness, and try deterministic
+fake mode:
 
 ```bash
 git clone <repo-url>
 cd dynamic-workflows-for-Codex
 python -m pip install -e ".[dev]"
 python -m pytest
+python -m cdw doctor
 python -m cdw review "Review this branch" --adapter fake
 ```
 
@@ -69,6 +71,7 @@ For the full consumer setup, read [docs/consumer-install.md](docs/consumer-insta
 - `cdw migrate`: create guarded write-heavy migration plans.
 - `cdw run`: execute saved workflow specs.
 - `cdw resume`: continue an incomplete persisted run.
+- `cdw doctor`: check clone readiness without running a real worker.
 - `cdw live-smoke`: diagnose live-mode prerequisites.
 - `cdw package-plugin`: generate Codex plugin packages.
 - `--adapter codex-cli`: run workers through the user's logged-in Codex CLI.
@@ -105,6 +108,7 @@ Codex CLI mode uses the user's own `codex exec` login state. It does not require
 this repo to store or receive an API key:
 
 ```bash
+python -m cdw doctor
 codex login status
 python -m cdw review "Review this branch" --adapter codex-cli
 python -m cdw run .cdw/specs/review.workflow.json --adapter codex-cli
@@ -113,6 +117,7 @@ python -m cdw run .cdw/specs/review.workflow.json --adapter codex-cli
 If `codex` is not on PATH, pass the user's own executable:
 
 ```bash
+python -m cdw doctor --codex-command /path/to/codex
 python -m cdw review "Review this branch" --adapter codex-cli --codex-command /path/to/codex
 ```
 
@@ -144,12 +149,14 @@ python -m cdw review "Review this branch" --adapter live --codex-command /path/t
 
 ## Project Status
 
-Current release: `v0.4`.
+Current release: `v0.5`.
 
 - v0.1: MVP runtime with plan/review/debug, fake adapter, live MCP boundary.
 - v0.2: workflow specs, resume, guarded migration, skill installer.
 - v0.3: live smoke diagnostics, v2 specs, plugin packaging.
 - v0.4: cloneable Codex marketplace, command overrides, consumer install docs.
+- v0.5: Codex CLI adapter, dry live contract, Windows Codex CLI fallback,
+  and clone-user `cdw doctor` diagnostics.
 
 See [CHANGELOG.md](CHANGELOG.md) for details.
 
