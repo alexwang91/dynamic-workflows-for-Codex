@@ -111,8 +111,13 @@ def test_run_executes_workflow_spec(tmp_path, capsys):
     )
 
     captured = capsys.readouterr()
+    run_id = captured.out.strip().splitlines()[-1].split()[-1]
+    state_path = tmp_path / ".cdw" / "runs" / run_id / "state.json"
+    data = json.loads(state_path.read_text(encoding="utf-8"))
+
     assert exit_code == 0
     assert captured.out.strip().splitlines()[-1].startswith("run ")
+    assert data["procedure"]["stages"][0]["id"] == "workflow-planner"
 
 
 def test_resume_command_continues_existing_run(tmp_path, capsys):

@@ -6,11 +6,14 @@ import time
 import uuid
 from pathlib import Path
 
-from cdw.schemas import RunState, WorkflowPlan
+from cdw.schemas import RunState, WorkflowPlan, WorkflowProcedure
 
 
-def create_run_state(plan: WorkflowPlan) -> RunState:
-    return RunState(run_id=uuid.uuid4().hex[:12], plan=plan)
+def create_run_state(
+    plan: WorkflowPlan,
+    procedure: WorkflowProcedure | None = None,
+) -> RunState:
+    return RunState(run_id=uuid.uuid4().hex[:12], plan=plan, procedure=procedure)
 
 
 def run_dir(root: Path, run_id: str) -> Path:

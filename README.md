@@ -1,9 +1,9 @@
 # Dynamic Workflows For Codex
 
-[![Release](https://img.shields.io/badge/release-v0.5-blue)](CHANGELOG.md)
+[![Release](https://img.shields.io/badge/release-v0.6-blue)](CHANGELOG.md)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](pyproject.toml)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-51%20passed-brightgreen)](tests)
+[![Tests](https://img.shields.io/badge/tests-60%20passed-brightgreen)](tests)
 
 External dynamic workflow runtime for Codex.
 
@@ -87,8 +87,11 @@ The runtime owns the control plane:
 5. Verify results before synthesis.
 6. Synthesize from structured state, not chat history.
 
-Workflow specs are v2 JSON envelopes with metadata, constraints, acceptance
-criteria, and an embedded `WorkflowPlan`. Older v1 plan-root specs still load.
+Workflow specs are v3 JSON envelopes with metadata, constraints, acceptance
+criteria, a procedure graph, and an embedded `WorkflowPlan`. The runtime uses
+that procedure graph for `cdw run`: ordered stages, verification gates, failure
+behavior, and final artifacts are part of execution, not just documentation.
+Older v2 envelopes and v1 plan-root specs still load.
 
 ## Modes
 
@@ -149,7 +152,7 @@ python -m cdw review "Review this branch" --adapter live --codex-command /path/t
 
 ## Project Status
 
-Current release: `v0.5`.
+Current release: `v0.6`.
 
 - v0.1: MVP runtime with plan/review/debug, fake adapter, live MCP boundary.
 - v0.2: workflow specs, resume, guarded migration, skill installer.
@@ -157,6 +160,8 @@ Current release: `v0.5`.
 - v0.4: cloneable Codex marketplace, command overrides, consumer install docs.
 - v0.5: Codex CLI adapter, dry live contract, Windows Codex CLI fallback,
   and clone-user `cdw doctor` diagnostics.
+- v0.6: v3 workflow specs with procedure graph stages, gates, triggers,
+  failure behavior, v2 backfill compatibility, and staged runtime execution.
 
 See [CHANGELOG.md](CHANGELOG.md) for details.
 

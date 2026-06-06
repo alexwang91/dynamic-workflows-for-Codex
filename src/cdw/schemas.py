@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class Command(str, Enum):
@@ -55,17 +55,69 @@ class WorkflowSpecConstraints(BaseModel):
     requires_human_approval: bool = False
 
 
+StageGate = Literal["all_required_verified", "any_verified", "manual_review"]
+FailureBehavior = Literal["stop", "continue", "require_human"]
+ProcedureMode = Literal["single-stage", "fan-out", "sequence", "guarded"]
+
+
+class WorkflowStage(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str = Field(min_length=1)
+    purpose: str = Field(min_length=1)
+    work_unit_ids: list[str] = Field(min_length=1)
+    gate: StageGate = "all_required_verified"
+    on_failure: FailureBehavior = "stop"
+
+
+class WorkflowProcedure(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    mode: ProcedureMode
+    triggers: list[str] = Field(default_factory=list)
+    stages: list[WorkflowStage] = Field(min_length=1)
+    final_artifacts: list[str] = Field(default_factory=list)
+
+
 class WorkflowSpecBundle(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    schema_version: Literal["2"] = "2"
+    schema_version: Literal["2", "3"] = "3"
     kind: Literal["codex.dynamic-workflow"] = "codex.dynamic-workflow"
     metadata: WorkflowSpecMetadata = Field(default_factory=WorkflowSpecMetadata)
     constraints: WorkflowSpecConstraints = Field(
         default_factory=WorkflowSpecConstraints
     )
     acceptance_criteria: list[str] = Field(default_factory=list)
+    procedure: WorkflowProcedure | None = None
     plan: WorkflowPlan
+
+    @model_validator(mode="after")
+    def validate_procedure_references(self) -> "WorkflowSpecBundle":
+        if self.procedure is None:
+            return self
+
+        known_ids = {work_unit.id for work_unit in self.plan.work_units}
+        referenced_ids = []
+        for stage in self.procedure.stages:
+            unknown_ids = sorted(set(stage.work_unit_ids) - known_ids)
+            if unknown_ids:
+                raise ValueError(f"unknown work unit ids: {unknown_ids}")
+            referenced_ids.extend(stage.work_unit_ids)
+
+        duplicate_ids = sorted(
+            work_unit_id
+            for work_unit_id in set(referenced_ids)
+            if referenced_ids.count(work_unit_id) > 1
+        )
+        if duplicate_ids:
+            raise ValueError(f"duplicate staged work unit ids: {duplicate_ids}")
+
+        missing_ids = sorted(known_ids - set(referenced_ids))
+        if missing_ids:
+            raise ValueError(f"unstaged work unit ids: {missing_ids}")
+
+        return self
 
 
 class WorkerStatus(str, Enum):
@@ -111,6 +163,7 @@ class RunState(BaseModel):
     run_id: str = Field(min_length=1)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     plan: WorkflowPlan
+    procedure: WorkflowProcedure | None = None
     worker_results: list[WorkerResult] = Field(default_factory=list)
     verification_results: list[VerificationResult] = Field(default_factory=list)
     synthesis: SynthesisReport | None = None

@@ -13,9 +13,9 @@ from cdw.planner import build_plan
 from cdw.plugin_package import package_plugin
 from cdw.plugin_package import package_repo_marketplace
 from cdw.resume import resume_run
-from cdw.runtime import execute_plan
+from cdw.runtime import execute_plan, execute_workflow_bundle
 from cdw.skill import install_skill
-from cdw.workflow_spec import load_workflow_spec, save_workflow_spec
+from cdw.workflow_spec import load_workflow_spec_bundle, save_workflow_spec
 
 ADAPTER_CHOICES = ("fake", "live", "codex-cli")
 
@@ -104,9 +104,16 @@ def main(argv: list[str] | None = None) -> int:
         print(f"run {state.run_id}")
         return 0
     if args.command == "run":
-        plan = load_workflow_spec(Path(args.workflow_spec))
-    else:
-        plan = build_plan(args.command, args.request)
+        bundle = load_workflow_spec_bundle(Path(args.workflow_spec))
+        adapter = _build_adapter(config, codex_command=args.codex_command)
+        try:
+            state = execute_workflow_bundle(bundle, config.root, adapter)
+        except RuntimeError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 1
+        print(f"run {state.run_id}")
+        return 0
+    plan = build_plan(args.command, args.request)
     if args.command == "plan" and args.save_spec:
         path = save_workflow_spec(Path(args.save_spec), plan)
         print(f"spec {path}")
