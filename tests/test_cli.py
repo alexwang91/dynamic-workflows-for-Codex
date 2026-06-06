@@ -3,6 +3,12 @@ import json
 import subprocess
 
 from cdw.cli import build_parser, main
+from cdw.schemas import (
+    VerificationResult,
+    VerificationStatus,
+    WorkerResult,
+    WorkerStatus,
+)
 
 
 def test_build_parser_has_core_commands():
@@ -118,6 +124,37 @@ def test_run_executes_workflow_spec(tmp_path, capsys):
     assert exit_code == 0
     assert captured.out.strip().splitlines()[-1].startswith("run ")
     assert data["procedure"]["stages"][0]["id"] == "workflow-planner"
+
+
+def test_cli_returns_failure_when_workflow_is_incomplete(tmp_path, capsys, monkeypatch):
+    class FailingVerifierAdapter:
+        def run_worker(self, work_unit):
+            return WorkerResult(
+                work_unit_id=work_unit.id,
+                status=WorkerStatus.SUCCEEDED,
+                summary="worker output",
+            )
+
+        def verify_worker_result(self, result):
+            return VerificationResult(
+                work_unit_id=result.work_unit_id,
+                status=VerificationStatus.FAILED,
+                notes="not good enough",
+            )
+
+    monkeypatch.setattr(
+        "cdw.cli._build_adapter",
+        lambda config, codex_command=None: FailingVerifierAdapter(),
+    )
+
+    exit_code = main(["plan", "Review branch", "--root", str(tmp_path)])
+
+    captured = capsys.readouterr()
+
+    assert exit_code == 1
+    assert captured.out.startswith("run ")
+    assert "workflow incomplete" in captured.err
+    assert "planner" in captured.err
 
 
 def test_resume_command_continues_existing_run(tmp_path, capsys):

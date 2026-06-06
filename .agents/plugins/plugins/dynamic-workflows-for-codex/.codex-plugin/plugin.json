@@ -1,6 +1,6 @@
 {
   "name": "dynamic-workflows-for-codex",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "Dynamic workflow runtime with bootstrap, doctor checks, and Codex CLI skill routing.",
   "author": {
     "name": "Local developer"

@@ -54,8 +54,6 @@ class CodexCliAdapter:
             str(Path(self.root)),
             "-s",
             self.sandbox,
-            "-a",
-            self.approval_policy,
             prompt,
         ]
         try:
@@ -72,7 +70,7 @@ class CodexCliAdapter:
                 f"Codex CLI adapter could not run codex exec: {exc}"
             ) from exc
 
-        output = (completed.stdout or completed.stderr).strip()
+        output = _clean_codex_output(completed.stdout or completed.stderr)
         if completed.returncode != 0:
             message = output or f"codex exec exited with {completed.returncode}"
             raise RuntimeError(f"Codex CLI adapter failed: {message}")
@@ -98,3 +96,16 @@ class CodexCliAdapter:
             f"Evidence: {result.evidence}\n"
             f"Raw output: {result.raw_output}\n"
         )
+
+
+def _clean_codex_output(output: str) -> str:
+    lines = []
+    for line in output.splitlines():
+        stripped = line.strip()
+        if (
+            stripped.startswith("SUCCESS: The process with PID ")
+            and stripped.endswith(" has been terminated.")
+        ):
+            continue
+        lines.append(line)
+    return "\n".join(lines).strip()
