@@ -46,6 +46,8 @@ def build_parser() -> argparse.ArgumentParser:
     resume_command.add_argument("--codex-command")
     install_skill_command = subparsers.add_parser("install-skill")
     install_skill_command.add_argument("--root", default=".")
+    bootstrap_command = subparsers.add_parser("bootstrap")
+    bootstrap_command.add_argument("--root", default=".")
     doctor_command = subparsers.add_parser("doctor")
     doctor_command.add_argument("--root", default=".")
     doctor_command.add_argument("--codex-command")
@@ -67,6 +69,12 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "install-skill":
         path = install_skill(Path(args.root))
         print(f"skill {path}")
+        return 0
+    if args.command == "bootstrap":
+        from cdw.bootstrap import run_bootstrap
+
+        report = run_bootstrap(Path(args.root))
+        print(report.to_text())
         return 0
     if args.command == "doctor":
         from cdw.doctor import run_doctor

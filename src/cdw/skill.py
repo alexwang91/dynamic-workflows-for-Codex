@@ -33,12 +33,18 @@ Use this skill when the user asks for any of these:
 - Reusable workflow specs, staged procedure graphs, or resumable runs.
 - Clone/install readiness checks for this plugin or runtime.
 
-Route setup and broken-environment reports to `cdw doctor --root <repo>`.
+Route first-time clone setup to `cdw bootstrap --root <repo>` and then
+`cdw doctor --root <repo>`.
+Route broken-environment reports to `cdw doctor --root <repo>`.
 Route existing run ids to `cdw resume <run-id>` before starting new work.
 Route reusable multi-step work through `cdw plan --save-spec` followed by
 `cdw run <workflow-spec>`.
 
 ## Operating Loop
+
+Run `cdw bootstrap --root <repo>` after cloning or packaging changes. It
+refreshes the repo-local plugin marketplace and packaged skill, then prints the
+marketplace registration and doctor commands.
 
 Run `cdw doctor --root <repo>` before real workflows. It verifies local state
 writeability, the repo-local plugin package, the packaged skill, and the user's
@@ -82,6 +88,7 @@ worker results, verifier results, synthesis, and staged procedure state.
 ## Command Map
 
 - Run `cdw plan "<request>" --save-spec <file>` to create a reusable workflow spec.
+- Run `cdw bootstrap --root <repo>` to refresh repo-local plugin packaging and print install next steps.
 - Run `cdw review "<request>" --adapter codex-cli` for a real review workflow through the user's logged-in Codex CLI.
 - Run `cdw debug "<request>" --adapter codex-cli` for hypothesis-driven debugging.
 - Run `cdw run <workflow-spec> --adapter codex-cli` to execute a saved workflow with Codex CLI workers.

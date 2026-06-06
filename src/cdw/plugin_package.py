@@ -43,8 +43,8 @@ def package_repo_marketplace(root: Path) -> Path:
 def _plugin_manifest() -> dict:
     return {
         "name": PLUGIN_NAME,
-        "version": "0.7.0",
-        "description": "Dynamic workflow runtime, doctor checks, and Codex CLI skill routing for Codex.",
+        "version": "0.8.0",
+        "description": "Dynamic workflow runtime with bootstrap, doctor checks, and Codex CLI skill routing.",
         "author": {
             "name": "Local developer",
         },
@@ -52,17 +52,19 @@ def _plugin_manifest() -> dict:
         "keywords": ["codex", "workflow", "agents", "review", "debug", "doctor"],
         "interface": {
             "displayName": "Dynamic Workflows for Codex",
-            "shortDescription": "Route Codex tasks through cdw dynamic workflows.",
+            "shortDescription": "Bootstrap and route Codex dynamic workflows.",
             "longDescription": (
-                "Packages a Codex skill wrapper that runs cdw doctor readiness "
-                "checks, routes real workers through the user's codex-cli login, "
-                "and delegates review, debugging, workflow specs, staged runs, "
-                "resume, and guarded migrations to the cdw external runtime."
+                "Packages a Codex skill wrapper that bootstraps the repo-local "
+                "plugin marketplace, runs cdw doctor readiness checks, routes "
+                "real workers through the user's codex-cli login, and delegates "
+                "review, debugging, workflow specs, staged runs, resume, and "
+                "guarded migrations to the cdw external runtime."
             ),
             "developerName": "Local developer",
             "category": "Productivity",
             "capabilities": ["Workflow", "Review"],
             "defaultPrompt": [
+                "Bootstrap this clone for Codex dynamic workflows.",
                 "Run cdw doctor for this clone.",
                 "Review this branch with dynamic workflows.",
                 "Debug this flaky test with cdw.",
