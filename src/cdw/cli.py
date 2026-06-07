@@ -8,6 +8,7 @@ from pathlib import Path
 from cdw.codex_mcp import FakeCodexAdapter
 from cdw.codex_command import resolve_codex_command
 from cdw.config import RuntimeConfig
+from cdw.dynamic_planner import PLANNER_CHOICES, build_dynamic_workflow_spec
 from cdw.live_smoke import build_live_smoke_contract, run_live_smoke
 from cdw.planner import build_plan
 from cdw.plugin_package import package_plugin
@@ -15,7 +16,11 @@ from cdw.plugin_package import package_repo_marketplace
 from cdw.resume import resume_run
 from cdw.runtime import execute_plan, execute_workflow_bundle
 from cdw.skill import install_skill
-from cdw.workflow_spec import load_workflow_spec_bundle, save_workflow_spec
+from cdw.workflow_spec import (
+    load_workflow_spec_bundle,
+    save_workflow_spec,
+    save_workflow_spec_bundle,
+)
 
 ADAPTER_CHOICES = ("fake", "live", "codex-cli")
 
@@ -34,6 +39,7 @@ def build_parser() -> argparse.ArgumentParser:
         command.add_argument("--codex-command")
         if name == "plan":
             command.add_argument("--save-spec")
+            command.add_argument("--planner", choices=PLANNER_CHOICES, default="static")
     run_command = subparsers.add_parser("run")
     run_command.add_argument("workflow_spec")
     run_command.add_argument("--root", default=".")
@@ -121,9 +127,29 @@ def main(argv: list[str] | None = None) -> int:
         return _finish_run(state)
     plan = build_plan(args.command, args.request)
     if args.command == "plan" and args.save_spec:
-        path = save_workflow_spec(Path(args.save_spec), plan)
+        if args.planner == "static":
+            path = save_workflow_spec(Path(args.save_spec), plan)
+        else:
+            codex_command = "codex"
+            if args.planner == "codex-cli":
+                resolution = resolve_codex_command(explicit=args.codex_command)
+                codex_command = resolution.command or "codex"
+            try:
+                bundle = build_dynamic_workflow_spec(
+                    args.request,
+                    planner=args.planner,
+                    root=Path(args.root),
+                    codex_command=codex_command,
+                )
+            except RuntimeError as exc:
+                print(f"error: {exc}", file=sys.stderr)
+                return 1
+            path = save_workflow_spec_bundle(Path(args.save_spec), bundle)
         print(f"spec {path}")
         return 0
+    if args.command == "plan" and args.planner != "static":
+        print("error: --planner requires --save-spec", file=sys.stderr)
+        return 1
     adapter = _build_adapter(config, codex_command=args.codex_command)
     try:
         state = execute_plan(plan, config.root, adapter)

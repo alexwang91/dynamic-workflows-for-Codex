@@ -2,6 +2,16 @@
 
 All notable changes to `dynamic-workflows-for-Codex` are documented here.
 
+## v0.10 - 2026-06-07
+
+- Added `cdw plan --planner {static,fake,codex-cli}`.
+- Added a deterministic fake dynamic planner that writes validated multi-stage v3 workflow specs.
+- Added a Codex CLI dynamic planner that asks the user's own `codex exec` to generate a full `WorkflowSpecBundle`.
+- Added JSON and fenced-JSON extraction plus schema validation for dynamic planner output.
+- Added strict `--output-schema` guidance for Codex CLI planner output before final Pydantic validation.
+- Added user-facing CLI errors when dynamic planner output is malformed or `--planner` is used without `--save-spec`.
+- Bumped package and plugin metadata to `0.10.0`.
+
 ## v0.9 - 2026-06-06
 
 - Fixed `--adapter codex-cli` to use the current `codex exec -C <root> -s <sandbox> <prompt>` argument shape.

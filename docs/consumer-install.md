@@ -81,10 +81,15 @@ the user's Codex environment.
 From the cloned repo:
 
 ```powershell
-python -m cdw plan "Review this branch" --save-spec .cdw/specs/review.workflow.json
+python -m cdw plan "Review this branch" --planner codex-cli --save-spec .cdw/specs/review.workflow.json
 python -m cdw run .cdw/specs/review.workflow.json --adapter codex-cli
 python -m cdw migrate "Rename User model to Account" --adapter codex-cli
 ```
+
+Use `--planner codex-cli` when the user's own Codex CLI should design a
+task-specific workflow spec from a broad request. Use `--planner fake` for
+deterministic demos and tests. The default `--planner static` preserves the
+older fixed planning template.
 
 Use fake mode for deterministic tests and demos:
 

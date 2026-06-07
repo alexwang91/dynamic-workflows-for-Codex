@@ -1,9 +1,9 @@
 # Dynamic Workflows For Codex
 
-[![Release](https://img.shields.io/badge/release-v0.9-blue)](CHANGELOG.md)
+[![Release](https://img.shields.io/badge/release-v0.10-blue)](CHANGELOG.md)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](pyproject.toml)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-66%20passed-brightgreen)](tests)
+[![Tests](https://img.shields.io/badge/tests-77%20passed-brightgreen)](tests)
 
 External dynamic workflow runtime for Codex.
 
@@ -34,7 +34,7 @@ python -m cdw review "Review this branch" --adapter fake
 Create and run a reusable workflow spec:
 
 ```bash
-python -m cdw plan "Review this branch" --save-spec .cdw/specs/review.workflow.json
+python -m cdw plan "Review this branch" --planner fake --save-spec .cdw/specs/review.workflow.json
 python -m cdw run .cdw/specs/review.workflow.json --adapter fake
 python -m cdw resume <run-id> --adapter fake
 ```
@@ -71,6 +71,7 @@ For the full consumer setup, read [docs/consumer-install.md](docs/consumer-insta
 ## What You Get
 
 - `cdw plan`: create a typed workflow plan.
+- `cdw plan --planner codex-cli --save-spec`: create a dynamic validated workflow spec through the user's Codex CLI.
 - `cdw review`: fan out specialist review workers.
 - `cdw debug`: fan out hypothesis investigators.
 - `cdw migrate`: create guarded write-heavy migration plans.
@@ -99,6 +100,12 @@ that procedure graph for `cdw run`: ordered stages, verification gates, failure
 behavior, and final artifacts are part of execution, not just documentation.
 Older v2 envelopes and v1 plan-root specs still load.
 
+`cdw plan` now supports planner modes. `static` is the default and preserves the
+old fixed planning template. `fake` writes a deterministic multi-stage dynamic
+spec for tests and demos. `codex-cli` asks the user's own Codex CLI to design a
+full v3 workflow spec using a strict output schema, validates it locally, and
+writes it only when `--save-spec` is provided.
+
 ## Modes
 
 ### Fake
@@ -119,6 +126,7 @@ this repo to store or receive an API key:
 ```bash
 python -m cdw doctor
 codex login status
+python -m cdw plan "Design a review workflow for this branch" --planner codex-cli --save-spec .cdw/specs/review.workflow.json
 python -m cdw review "Review this branch" --adapter codex-cli
 python -m cdw run .cdw/specs/review.workflow.json --adapter codex-cli
 ```
@@ -161,7 +169,7 @@ python -m cdw review "Review this branch" --adapter live --codex-command /path/t
 
 ## Project Status
 
-Current release: `v0.9`.
+Current release: `v0.10`.
 
 - v0.1: MVP runtime with plan/review/debug, fake adapter, live MCP boundary.
 - v0.2: workflow specs, resume, guarded migration, skill installer.
@@ -178,6 +186,9 @@ Current release: `v0.9`.
 - v0.9: Codex CLI adapter compatibility with current `codex exec` arguments,
   Windows CLI output cleanup, non-zero CLI exits for incomplete workflows, and
   real-smoke-driven codex-cli hardening.
+- v0.10: explicit dynamic planner modes for `cdw plan`, including
+  `--planner codex-cli` for validated model-generated workflow specs and
+  `--planner fake` for deterministic dynamic spec tests.
 
 See [CHANGELOG.md](CHANGELOG.md) for details.
 
