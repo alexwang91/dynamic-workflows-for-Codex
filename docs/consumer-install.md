@@ -83,6 +83,8 @@ From the cloned repo:
 ```powershell
 python -m cdw plan "Review this branch" --planner codex-cli --save-spec .cdw/specs/review.workflow.json
 python -m cdw run .cdw/specs/review.workflow.json --adapter codex-cli
+python -m cdw status <run-id>
+python -m cdw runs
 python -m cdw migrate "Rename User model to Account" --adapter codex-cli
 ```
 
@@ -91,8 +93,13 @@ task-specific workflow spec from a broad request. Use `--planner fake` for
 deterministic demos and tests. The default `--planner static` preserves the
 older fixed planning template.
 
+Use `cdw status <run-id>` before resuming a workflow. It reports the synthesis
+status, pending human approval stage, state path, and adapter-aware approval
+resume command. Use `cdw status <run-id> --json` or `cdw runs --json` when a
+Codex skill needs machine-readable status.
+
 Some guarded workflows pause with `waiting_for_human`. Review the pending stage
-in `.cdw/runs/<run-id>/state.json`, then resume only after approval:
+from `cdw status <run-id>`, then resume only after approval:
 
 ```powershell
 python -m cdw resume <run-id> --adapter codex-cli --approve-human-gates

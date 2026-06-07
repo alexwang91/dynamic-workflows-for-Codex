@@ -12,8 +12,14 @@ from cdw.schemas import RunState, WorkflowPlan, WorkflowProcedure
 def create_run_state(
     plan: WorkflowPlan,
     procedure: WorkflowProcedure | None = None,
+    adapter: str | None = None,
 ) -> RunState:
-    return RunState(run_id=uuid.uuid4().hex[:12], plan=plan, procedure=procedure)
+    return RunState(
+        run_id=uuid.uuid4().hex[:12],
+        plan=plan,
+        procedure=procedure,
+        adapter=adapter,
+    )
 
 
 def run_dir(root: Path, run_id: str) -> Path:

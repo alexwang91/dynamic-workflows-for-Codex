@@ -103,3 +103,14 @@
 - `cdw resume <run-id> --approve-human-gates` continues the currently pending stage.
 - Later human-gated stages pause again instead of inheriting a previous approval.
 - Guarded migration workflows stop after inventory before the migration-plan review stage until approved on resume.
+
+## v0.12 Behavior
+
+- `cdw status <run-id>` reads persisted run state without executing workers.
+- `cdw status <run-id>` reports synthesis status, command, request, pending human approval, resume hint, and state path.
+- `cdw status <run-id>` includes the persisted adapter name when available so resume hints do not switch execution backends.
+- `cdw status <run-id> --json` returns a parseable run summary object.
+- `cdw runs` lists recent runs newest first by `state.json` modification time.
+- `cdw runs --json` returns parseable run summary objects.
+- Missing run ids produce a user-facing `run not found` error without traceback.
+- The packaged skill inspects run status before resuming existing run ids.

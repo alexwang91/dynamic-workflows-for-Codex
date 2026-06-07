@@ -16,11 +16,12 @@ def test_package_plugin_writes_manifest_and_skill(tmp_path):
 
     assert path == tmp_path / "dynamic-workflows-for-codex"
     assert manifest["name"] == "dynamic-workflows-for-codex"
-    assert manifest["version"] == "0.11.0"
+    assert manifest["version"] == "0.12.0"
     assert manifest["skills"] == "./skills/"
     assert "doctor" in manifest["interface"]["longDescription"]
     assert "codex-cli" in manifest["interface"]["longDescription"]
     assert "dynamic planning" in manifest["interface"]["longDescription"]
+    assert "run status inspection" in manifest["interface"]["longDescription"]
     assert "human approval gates" in manifest["interface"]["longDescription"]
     assert "workflow specs" in manifest["interface"]["longDescription"]
     assert "runtime owns orchestration" in content

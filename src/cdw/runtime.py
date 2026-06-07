@@ -22,12 +22,14 @@ def execute_plan(
     root: Path,
     adapter: CodexAdapter,
     approve_human_gates: bool = False,
+    adapter_name: str | None = None,
 ) -> RunState:
     return execute_workflow_bundle(
         build_workflow_spec_bundle(plan),
         root,
         adapter,
         approve_human_gates=approve_human_gates,
+        adapter_name=adapter_name,
     )
 
 
@@ -36,8 +38,13 @@ def execute_workflow_bundle(
     root: Path,
     adapter: CodexAdapter,
     approve_human_gates: bool = False,
+    adapter_name: str | None = None,
 ) -> RunState:
-    state = create_run_state(bundle.plan, procedure=bundle.procedure)
+    state = create_run_state(
+        bundle.plan,
+        procedure=bundle.procedure,
+        adapter=adapter_name,
+    )
     save_run_state(root, state)
 
     execute_existing_state(

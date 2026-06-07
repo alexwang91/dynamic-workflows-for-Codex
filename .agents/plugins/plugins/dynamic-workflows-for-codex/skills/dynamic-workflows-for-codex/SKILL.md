@@ -1,6 +1,6 @@
 ---
 name: dynamic-workflows-for-codex
-description: Use when a Codex task needs dynamic workflow orchestration for branch review, debugging, resumable workflow specs, guarded migrations, staged procedure execution, or clone-user readiness checks.
+description: Use when a Codex task needs dynamic workflow orchestration for branch review, debugging, resumable workflow specs, run status inspection, guarded migrations, staged procedure execution, or clone-user readiness checks.
 ---
 
 # Dynamic Workflows For Codex
@@ -16,12 +16,13 @@ Use this skill when the user asks for any of these:
 - Guarded migrations, write-heavy refactors, or ownership-bounded changes.
 - Reusable workflow specs, staged procedure graphs, or resumable runs.
 - Dynamic workflow planning from a broad request.
+- Run status inspection for interrupted, paused, or recently completed workflows.
 - Clone/install readiness checks for this plugin or runtime.
 
 Route first-time clone setup to `cdw bootstrap --root <repo>` and then
 `cdw doctor --root <repo>`.
 Route broken-environment reports to `cdw doctor --root <repo>`.
-Route existing run ids to `cdw resume <run-id>` before starting new work.
+Route existing run ids to `cdw status <run-id>` before resuming or starting new work.
 Route reusable multi-step work through `cdw plan --planner codex-cli
 --save-spec` followed by `cdw run <workflow-spec>`.
 If a run reports `waiting_for_human`, report the pending stage and wait for
@@ -45,7 +46,7 @@ For multi-step work, prefer a saved workflow spec:
 
 1. Run `cdw plan "<request>" --planner codex-cli --save-spec .cdw/specs/<name>.workflow.json`.
 2. Run `cdw run .cdw/specs/<name>.workflow.json --adapter codex-cli`.
-3. Report the run id and state path under `.cdw/runs/<run-id>/state.json`.
+3. Run `cdw status <run-id>` when reporting or deciding the next action.
 4. If interrupted, partially complete, or waiting for human approval, resume the same run id.
 
 For direct task-specific workflows, use `review`, `debug`, or `migrate` with
@@ -72,14 +73,20 @@ the same adapter policy below.
 ## Approval Policy
 
 - Treat `waiting_for_human` as a real stop, not a failure to work around.
-- Report the pending stage from `.cdw/runs/<run-id>/state.json`.
+- Report the pending stage from `cdw status <run-id>` or `cdw status <run-id> --json`.
 - Ask the user before passing `--approve-human-gates`.
 - After approval, run `cdw resume <run-id> --adapter codex-cli --approve-human-gates`.
 
-## Resume First
+## Status First
 
 If the user gives a run id, mentions an interrupted workflow, or asks to
-continue previous dynamic workflow work, run:
+continue previous dynamic workflow work, inspect it before doing new work:
+
+```bash
+cdw status <run-id>
+```
+
+If status is incomplete and no human approval is pending, then resume:
 
 ```bash
 cdw resume <run-id> --adapter codex-cli
@@ -93,6 +100,9 @@ worker results, verifier results, synthesis, and staged procedure state.
 - Run `cdw plan "<request>" --planner codex-cli --save-spec <file>` to create a dynamic reusable workflow spec.
 - Run `cdw plan "<request>" --save-spec <file>` to create a static reusable workflow spec.
 - Run `cdw bootstrap --root <repo>` to refresh repo-local plugin packaging and print install next steps.
+- Run `cdw status <run-id>` to inspect a persisted workflow run before resuming.
+- Run `cdw status <run-id> --json` when a machine-readable status is needed.
+- Run `cdw runs` to list recent persisted workflow runs.
 - Run `cdw review "<request>" --adapter codex-cli` for a real review workflow through the user's logged-in Codex CLI.
 - Run `cdw debug "<request>" --adapter codex-cli` for hypothesis-driven debugging.
 - Run `cdw run <workflow-spec> --adapter codex-cli` to execute a saved workflow with Codex CLI workers.
