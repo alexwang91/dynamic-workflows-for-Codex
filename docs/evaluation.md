@@ -84,3 +84,12 @@
 - Codex CLI adapter output removes Windows process-cleanup noise before persisting worker output or reading verifier verdicts.
 - CLI run commands return non-zero when synthesis is incomplete and report unresolved work units on stderr.
 - Real codex-cli smoke attempts run through the user's logged-in Codex CLI without project-owned API keys and remain subject to the user's local quota.
+
+## v0.10 Behavior
+
+- `cdw plan` accepts `--planner static`, `--planner fake`, and `--planner codex-cli`.
+- `static` remains the default planning mode for backward compatibility.
+- `fake` writes a deterministic multi-stage v3 workflow spec without Codex CLI or API keys.
+- `codex-cli` asks the user's own `codex exec` to generate a full v3 workflow spec with a strict output schema and validates it before writing.
+- Dynamic planner output accepts raw JSON or fenced JSON and rejects malformed JSON or invalid workflow specs without traceback.
+- Dynamic planner modes require `--save-spec`; planning does not execute workers.

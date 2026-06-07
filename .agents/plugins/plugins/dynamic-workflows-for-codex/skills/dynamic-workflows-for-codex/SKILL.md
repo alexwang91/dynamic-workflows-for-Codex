@@ -15,14 +15,15 @@ Use this skill when the user asks for any of these:
 - Debugging that needs parallel hypotheses or repeatable investigation.
 - Guarded migrations, write-heavy refactors, or ownership-bounded changes.
 - Reusable workflow specs, staged procedure graphs, or resumable runs.
+- Dynamic workflow planning from a broad request.
 - Clone/install readiness checks for this plugin or runtime.
 
 Route first-time clone setup to `cdw bootstrap --root <repo>` and then
 `cdw doctor --root <repo>`.
 Route broken-environment reports to `cdw doctor --root <repo>`.
 Route existing run ids to `cdw resume <run-id>` before starting new work.
-Route reusable multi-step work through `cdw plan --save-spec` followed by
-`cdw run <workflow-spec>`.
+Route reusable multi-step work through `cdw plan --planner codex-cli
+--save-spec` followed by `cdw run <workflow-spec>`.
 
 ## Operating Loop
 
@@ -40,7 +41,7 @@ If `codex` is not on PATH, rerun doctor with `--codex-command <path>` or set
 
 For multi-step work, prefer a saved workflow spec:
 
-1. Run `cdw plan "<request>" --save-spec .cdw/specs/<name>.workflow.json`.
+1. Run `cdw plan "<request>" --planner codex-cli --save-spec .cdw/specs/<name>.workflow.json`.
 2. Run `cdw run .cdw/specs/<name>.workflow.json --adapter codex-cli`.
 3. Report the run id and state path under `.cdw/runs/<run-id>/state.json`.
 4. If interrupted or partially complete, resume the same run id.
@@ -57,6 +58,15 @@ the same adapter policy below.
 - Use `--adapter live` only when explicitly testing the optional OpenAI Agents
   SDK / Codex MCP path.
 
+## Planner Policy
+
+- Use `--planner codex-cli` when the user wants Codex to design a task-specific
+  workflow spec from a broad request.
+- Use `--planner static` when preserving the old fixed planning template.
+- Use `--planner fake` for deterministic tests and demos.
+- Dynamic planner modes require `--save-spec`; planning writes a validated spec
+  and does not execute workers.
+
 ## Resume First
 
 If the user gives a run id, mentions an interrupted workflow, or asks to
@@ -71,7 +81,8 @@ worker results, verifier results, synthesis, and staged procedure state.
 
 ## Command Map
 
-- Run `cdw plan "<request>" --save-spec <file>` to create a reusable workflow spec.
+- Run `cdw plan "<request>" --planner codex-cli --save-spec <file>` to create a dynamic reusable workflow spec.
+- Run `cdw plan "<request>" --save-spec <file>` to create a static reusable workflow spec.
 - Run `cdw bootstrap --root <repo>` to refresh repo-local plugin packaging and print install next steps.
 - Run `cdw review "<request>" --adapter codex-cli` for a real review workflow through the user's logged-in Codex CLI.
 - Run `cdw debug "<request>" --adapter codex-cli` for hypothesis-driven debugging.

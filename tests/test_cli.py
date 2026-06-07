@@ -108,6 +108,92 @@ def test_plan_can_save_workflow_spec(tmp_path):
     assert spec_path.exists()
 
 
+def test_plan_can_save_fake_dynamic_workflow_spec(tmp_path):
+    spec_path = tmp_path / "dynamic.workflow.json"
+
+    exit_code = main(
+        [
+            "plan",
+            "Review auth migration",
+            "--planner",
+            "fake",
+            "--save-spec",
+            str(spec_path),
+        ]
+    )
+
+    data = json.loads(spec_path.read_text(encoding="utf-8"))
+
+    assert exit_code == 0
+    assert len(data["plan"]["work_units"]) >= 2
+    assert len(data["procedure"]["stages"]) >= 2
+
+
+def test_fake_dynamic_planner_does_not_require_codex_command(
+    tmp_path,
+    monkeypatch,
+):
+    spec_path = tmp_path / "dynamic.workflow.json"
+    monkeypatch.setattr(
+        "cdw.cli.resolve_codex_command",
+        lambda explicit=None: (_ for _ in ()).throw(AssertionError("should not resolve")),
+    )
+
+    exit_code = main(
+        [
+            "plan",
+            "Review auth migration",
+            "--planner",
+            "fake",
+            "--save-spec",
+            str(spec_path),
+        ]
+    )
+
+    assert exit_code == 0
+    assert spec_path.exists()
+
+
+def test_dynamic_planner_failure_is_user_facing(
+    tmp_path,
+    capsys,
+    monkeypatch,
+):
+    spec_path = tmp_path / "dynamic.workflow.json"
+    monkeypatch.setattr(
+        "cdw.cli.build_dynamic_workflow_spec",
+        lambda *args, **kwargs: (_ for _ in ()).throw(
+            RuntimeError("dynamic planner returned invalid JSON")
+        ),
+    )
+
+    exit_code = main(
+        [
+            "plan",
+            "Review auth migration",
+            "--planner",
+            "fake",
+            "--save-spec",
+            str(spec_path),
+        ]
+    )
+
+    captured = capsys.readouterr()
+
+    assert exit_code == 1
+    assert "dynamic planner returned invalid JSON" in captured.err
+    assert not spec_path.exists()
+
+
+def test_dynamic_planner_requires_save_spec(capsys):
+    exit_code = main(["plan", "Review branch", "--planner", "fake"])
+
+    captured = capsys.readouterr()
+
+    assert exit_code == 1
+    assert "--planner requires --save-spec" in captured.err
+
+
 def test_run_executes_workflow_spec(tmp_path, capsys):
     spec_path = tmp_path / "review.workflow.json"
     main(["plan", "Review branch", "--save-spec", str(spec_path)])

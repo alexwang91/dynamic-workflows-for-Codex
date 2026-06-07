@@ -16,6 +16,11 @@ from cdw.schemas import (
 def save_workflow_spec(path: Path, plan: WorkflowPlan) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     bundle = build_workflow_spec_bundle(plan)
+    return save_workflow_spec_bundle(path, bundle)
+
+
+def save_workflow_spec_bundle(path: Path, bundle: WorkflowSpecBundle) -> Path:
+    path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(bundle.model_dump_json(indent=2), encoding="utf-8")
     return path
 
