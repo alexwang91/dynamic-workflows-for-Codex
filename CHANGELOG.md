@@ -2,6 +2,16 @@
 
 All notable changes to `dynamic-workflows-for-Codex` are documented here.
 
+## v0.9 - 2026-06-06
+
+- Fixed `--adapter codex-cli` to use the current `codex exec -C <root> -s <sandbox> <prompt>` argument shape.
+- Removed the unsupported approval-policy CLI argument from Codex CLI worker execution.
+- Added a regression assertion so the adapter cannot reintroduce the old `-a` flag.
+- Filtered Windows Codex CLI process-cleanup noise before persisting worker output or parsing verifier verdicts.
+- Hardened CLI run commands to return non-zero when verification leaves a workflow incomplete.
+- Captured real codex-cli smoke failures as regression coverage; final live pass still depends on the clone user's available Codex quota.
+- Bumped package and plugin metadata to `0.9.0`.
+
 ## v0.8 - 2026-06-06
 
 - Added `cdw bootstrap` to refresh the repo-local plugin marketplace and package.

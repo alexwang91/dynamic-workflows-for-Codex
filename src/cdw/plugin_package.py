@@ -43,7 +43,7 @@ def package_repo_marketplace(root: Path) -> Path:
 def _plugin_manifest() -> dict:
     return {
         "name": PLUGIN_NAME,
-        "version": "0.8.0",
+        "version": "0.9.0",
         "description": "Dynamic workflow runtime with bootstrap, doctor checks, and Codex CLI skill routing.",
         "author": {
             "name": "Local developer",

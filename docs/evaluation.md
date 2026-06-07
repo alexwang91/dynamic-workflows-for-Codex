@@ -76,3 +76,11 @@
 - `cdw bootstrap` prints the next marketplace registration command and `python -m cdw doctor`.
 - Bootstrap does not modify global Codex configuration, run real workers, or require API keys.
 - Clone install docs put bootstrap before doctor.
+
+## v0.9 Behavior
+
+- `--adapter codex-cli` invokes `codex exec -C <root> -s <sandbox> <prompt>` without the unsupported `-a` approval-policy flag.
+- The adapter regression test fails if the old `-a` argument is reintroduced.
+- Codex CLI adapter output removes Windows process-cleanup noise before persisting worker output or reading verifier verdicts.
+- CLI run commands return non-zero when synthesis is incomplete and report unresolved work units on stderr.
+- Real codex-cli smoke attempts run through the user's logged-in Codex CLI without project-owned API keys and remain subject to the user's local quota.

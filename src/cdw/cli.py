@@ -109,8 +109,7 @@ def main(argv: list[str] | None = None) -> int:
         except RuntimeError as exc:
             print(f"error: {exc}", file=sys.stderr)
             return 1
-        print(f"run {state.run_id}")
-        return 0
+        return _finish_run(state)
     if args.command == "run":
         bundle = load_workflow_spec_bundle(Path(args.workflow_spec))
         adapter = _build_adapter(config, codex_command=args.codex_command)
@@ -119,8 +118,7 @@ def main(argv: list[str] | None = None) -> int:
         except RuntimeError as exc:
             print(f"error: {exc}", file=sys.stderr)
             return 1
-        print(f"run {state.run_id}")
-        return 0
+        return _finish_run(state)
     plan = build_plan(args.command, args.request)
     if args.command == "plan" and args.save_spec:
         path = save_workflow_spec(Path(args.save_spec), plan)
@@ -132,8 +130,17 @@ def main(argv: list[str] | None = None) -> int:
     except RuntimeError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
+    return _finish_run(state)
+
+
+def _finish_run(state) -> int:
     print(f"run {state.run_id}")
-    return 0
+    if state.synthesis is None or state.synthesis.status == "complete":
+        return 0
+
+    unresolved = ", ".join(state.synthesis.unresolved) or "unknown"
+    print(f"error: workflow incomplete; unresolved: {unresolved}", file=sys.stderr)
+    return 1
 
 
 def _build_adapter(config: RuntimeConfig, codex_command: str | None = None):

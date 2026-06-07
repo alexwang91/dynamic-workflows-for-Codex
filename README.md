@@ -1,9 +1,9 @@
 # Dynamic Workflows For Codex
 
-[![Release](https://img.shields.io/badge/release-v0.8-blue)](CHANGELOG.md)
+[![Release](https://img.shields.io/badge/release-v0.9-blue)](CHANGELOG.md)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](pyproject.toml)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-64%20passed-brightgreen)](tests)
+[![Tests](https://img.shields.io/badge/tests-66%20passed-brightgreen)](tests)
 
 External dynamic workflow runtime for Codex.
 
@@ -123,6 +123,9 @@ python -m cdw review "Review this branch" --adapter codex-cli
 python -m cdw run .cdw/specs/review.workflow.json --adapter codex-cli
 ```
 
+The adapter uses the current `codex exec -C <root> -s <sandbox> <prompt>` shape
+and does not pass project-owned API keys or deprecated approval-policy flags.
+
 If `codex` is not on PATH, pass the user's own executable:
 
 ```bash
@@ -158,7 +161,7 @@ python -m cdw review "Review this branch" --adapter live --codex-command /path/t
 
 ## Project Status
 
-Current release: `v0.8`.
+Current release: `v0.9`.
 
 - v0.1: MVP runtime with plan/review/debug, fake adapter, live MCP boundary.
 - v0.2: workflow specs, resume, guarded migration, skill installer.
@@ -172,6 +175,9 @@ Current release: `v0.8`.
   resume-first behavior, workflow spec routing, and stronger guardrails.
 - v0.8: clone bootstrap command that refreshes repo-local plugin packaging and
   prints marketplace registration plus doctor next steps.
+- v0.9: Codex CLI adapter compatibility with current `codex exec` arguments,
+  Windows CLI output cleanup, non-zero CLI exits for incomplete workflows, and
+  real-smoke-driven codex-cli hardening.
 
 See [CHANGELOG.md](CHANGELOG.md) for details.
 

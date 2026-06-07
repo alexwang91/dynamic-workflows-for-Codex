@@ -33,9 +33,8 @@ def test_codex_cli_adapter_runs_worker_with_codex_exec(monkeypatch, tmp_path):
         str(tmp_path),
         "-s",
         "workspace-write",
-        "-a",
-        "never",
     ]
+    assert "-a" not in calls["args"]
     assert "Role: reviewer" in calls["args"][-1]
     assert calls["kwargs"]["encoding"] == "utf-8"
     assert result.status == "succeeded"
@@ -48,7 +47,11 @@ def test_codex_cli_adapter_verifies_first_line(monkeypatch, tmp_path):
         lambda args, **kwargs: subprocess.CompletedProcess(
             args,
             0,
-            stdout="PASSED\nlooks good",
+            stdout=(
+                "SUCCESS: The process with PID 100 "
+                "(child process of PID 200) has been terminated.\n"
+                "PASSED\nlooks good"
+            ),
             stderr="",
         ),
     )
@@ -65,6 +68,38 @@ def test_codex_cli_adapter_verifies_first_line(monkeypatch, tmp_path):
 
     assert result.status == "passed"
     assert "looks good" in result.notes
+
+
+def test_codex_cli_adapter_strips_windows_process_cleanup_noise(
+    monkeypatch,
+    tmp_path,
+):
+    monkeypatch.setattr(
+        "subprocess.run",
+        lambda args, **kwargs: subprocess.CompletedProcess(
+            args,
+            0,
+            stdout=(
+                "SUCCESS: The process with PID 100 "
+                "(child process of PID 200) has been terminated.\n"
+                "worker output"
+            ),
+            stderr="",
+        ),
+    )
+    adapter = CodexCliAdapter(root=tmp_path, codex_command="codex-test")
+    work_unit = WorkUnit(
+        id="review",
+        role="reviewer",
+        goal="Review branch",
+        prompt="Find issues",
+        expected_output="Findings",
+    )
+
+    result = adapter.run_worker(work_unit)
+
+    assert result.raw_output == "worker output"
+    assert result.evidence == ["worker output"]
 
 
 def test_codex_cli_adapter_raises_user_facing_error_on_cli_failure(
