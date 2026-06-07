@@ -2,6 +2,16 @@
 
 All notable changes to `dynamic-workflows-for-Codex` are documented here.
 
+## v0.11 - 2026-06-07
+
+- Added runtime pauses before `manual_review` and `require_human` stages.
+- Added `pending_human_approval` to persisted run state.
+- Added `waiting_for_human` synthesis status and user-facing CLI output.
+- Added `--approve-human-gates` to `resume` for approving the currently pending human-gated stage.
+- Later human-gated stages pause again instead of inheriting a previous approval.
+- Guarded migration workflows now stop after read-only inventory before the manual migration-plan review stage.
+- Bumped package and plugin metadata to `0.11.0`.
+
 ## v0.10 - 2026-06-07
 
 - Added `cdw plan --planner {static,fake,codex-cli}`.

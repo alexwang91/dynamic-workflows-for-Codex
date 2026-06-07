@@ -24,6 +24,8 @@ Route broken-environment reports to `cdw doctor --root <repo>`.
 Route existing run ids to `cdw resume <run-id>` before starting new work.
 Route reusable multi-step work through `cdw plan --planner codex-cli
 --save-spec` followed by `cdw run <workflow-spec>`.
+If a run reports `waiting_for_human`, report the pending stage and wait for
+the user to approve before running `cdw resume <run-id> --approve-human-gates`.
 
 ## Operating Loop
 
@@ -44,7 +46,7 @@ For multi-step work, prefer a saved workflow spec:
 1. Run `cdw plan "<request>" --planner codex-cli --save-spec .cdw/specs/<name>.workflow.json`.
 2. Run `cdw run .cdw/specs/<name>.workflow.json --adapter codex-cli`.
 3. Report the run id and state path under `.cdw/runs/<run-id>/state.json`.
-4. If interrupted or partially complete, resume the same run id.
+4. If interrupted, partially complete, or waiting for human approval, resume the same run id.
 
 For direct task-specific workflows, use `review`, `debug`, or `migrate` with
 the same adapter policy below.
@@ -67,6 +69,13 @@ the same adapter policy below.
 - Dynamic planner modes require `--save-spec`; planning writes a validated spec
   and does not execute workers.
 
+## Approval Policy
+
+- Treat `waiting_for_human` as a real stop, not a failure to work around.
+- Report the pending stage from `.cdw/runs/<run-id>/state.json`.
+- Ask the user before passing `--approve-human-gates`.
+- After approval, run `cdw resume <run-id> --adapter codex-cli --approve-human-gates`.
+
 ## Resume First
 
 If the user gives a run id, mentions an interrupted workflow, or asks to
@@ -88,6 +97,7 @@ worker results, verifier results, synthesis, and staged procedure state.
 - Run `cdw debug "<request>" --adapter codex-cli` for hypothesis-driven debugging.
 - Run `cdw run <workflow-spec> --adapter codex-cli` to execute a saved workflow with Codex CLI workers.
 - Run `cdw resume <run-id> --adapter codex-cli` to continue a partial run.
+- Run `cdw resume <run-id> --adapter codex-cli --approve-human-gates` only after the user approves a pending human gate.
 - Run `cdw migrate "<request>" --adapter codex-cli` for guarded migration planning.
 - Run `cdw package-plugin --repo-marketplace --root <repo>` after packaging changes.
 - Use `--adapter fake` for deterministic tests and demos.
@@ -98,6 +108,8 @@ worker results, verifier results, synthesis, and staged procedure state.
 - Do not replace the runtime with free-form prompt orchestration.
 - Do not run real workers until `cdw doctor` passes or the user explicitly
   accepts the local readiness failure.
+- Do not pass `--approve-human-gates` unless the user explicitly approves the
+  pending stage.
 - Do not use `live-smoke --execute` unless the user explicitly wants the
   optional Agents SDK live path.
 - Keep `.cdw/` local. It stores workflow specs and run state, not secrets.

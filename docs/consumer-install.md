@@ -91,6 +91,16 @@ task-specific workflow spec from a broad request. Use `--planner fake` for
 deterministic demos and tests. The default `--planner static` preserves the
 older fixed planning template.
 
+Some guarded workflows pause with `waiting_for_human`. Review the pending stage
+in `.cdw/runs/<run-id>/state.json`, then resume only after approval:
+
+```powershell
+python -m cdw resume <run-id> --adapter codex-cli --approve-human-gates
+```
+
+That approval applies only to the current pending stage. If a later stage also
+requires human approval, the run pauses again.
+
 Use fake mode for deterministic tests and demos:
 
 ```powershell

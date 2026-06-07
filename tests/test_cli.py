@@ -2,13 +2,21 @@ import builtins
 import json
 import subprocess
 
+import pytest
+
 from cdw.cli import build_parser, main
 from cdw.schemas import (
     VerificationResult,
     VerificationStatus,
     WorkerResult,
     WorkerStatus,
+    WorkflowPlan,
+    WorkflowProcedure,
+    WorkflowSpecBundle,
+    WorkflowStage,
+    WorkUnit,
 )
+from cdw.workflow_spec import save_workflow_spec_bundle
 
 
 def test_build_parser_has_core_commands():
@@ -17,6 +25,16 @@ def test_build_parser_has_core_commands():
     subcommands = parser._subparsers._group_actions[0].choices
 
     assert {"plan", "review", "debug", "bootstrap", "doctor"}.issubset(subcommands)
+
+
+def test_approval_flag_is_resume_only():
+    parser = build_parser()
+
+    args = parser.parse_args(["resume", "abc123", "--approve-human-gates"])
+
+    assert args.approve_human_gates is True
+    with pytest.raises(SystemExit):
+        parser.parse_args(["run", "workflow.json", "--approve-human-gates"])
 
 
 def test_plan_command_persists_state(tmp_path, capsys):
@@ -255,6 +273,67 @@ def test_resume_command_continues_existing_run(tmp_path, capsys):
     assert f"run {run_id}" in capsys.readouterr().out
 
 
+def test_run_reports_waiting_for_human_approval(tmp_path, capsys):
+    spec_path = tmp_path / "manual.workflow.json"
+    save_workflow_spec_bundle(spec_path, _manual_gate_bundle())
+
+    exit_code = main(["run", str(spec_path), "--root", str(tmp_path)])
+
+    captured = capsys.readouterr()
+
+    assert exit_code == 1
+    assert "run " in captured.out
+    assert "waiting for human approval" in captured.err
+    assert "manual-review" in captured.err
+
+
+def test_resume_can_approve_human_gates(tmp_path, capsys):
+    spec_path = tmp_path / "manual.workflow.json"
+    save_workflow_spec_bundle(spec_path, _manual_gate_bundle())
+    main(["run", str(spec_path), "--root", str(tmp_path)])
+    run_id = capsys.readouterr().out.strip().split()[-1]
+
+    exit_code = main(
+        [
+            "resume",
+            run_id,
+            "--root",
+            str(tmp_path),
+            "--approve-human-gates",
+        ]
+    )
+
+    captured = capsys.readouterr()
+
+    assert exit_code == 0
+    assert f"run {run_id}" in captured.out
+
+
+def test_migrate_waits_for_human_approval_before_guarded_stage(tmp_path, capsys):
+    exit_code = main(
+        [
+            "migrate",
+            "Rename User model to Account",
+            "--root",
+            str(tmp_path),
+            "--adapter",
+            "fake",
+        ]
+    )
+
+    captured = capsys.readouterr()
+    run_id = captured.out.strip().split()[-1]
+    state_path = tmp_path / ".cdw" / "runs" / run_id / "state.json"
+    data = json.loads(state_path.read_text(encoding="utf-8"))
+
+    assert exit_code == 1
+    assert "waiting for human approval" in captured.err
+    assert data["pending_human_approval"] == "migration-plan-review"
+    assert [result["work_unit_id"] for result in data["worker_results"]] == [
+        "inventory"
+    ]
+
+
 def test_install_skill_command_writes_repo_skill(tmp_path, capsys):
     exit_code = main(["install-skill", "--root", str(tmp_path)])
 
@@ -269,6 +348,56 @@ def test_install_skill_command_writes_repo_skill(tmp_path, capsys):
     assert exit_code == 0
     assert captured.out.strip() == f"skill {skill_path}"
     assert skill_path.exists()
+
+
+def _manual_gate_bundle() -> WorkflowSpecBundle:
+    plan = WorkflowPlan(
+        command="review",
+        request="Manual review workflow",
+        pattern="manual-gated",
+        work_units=[
+            WorkUnit(
+                id="first",
+                role="first worker",
+                goal="Run first stage",
+                prompt="Run first stage",
+                expected_output="First result",
+            ),
+            WorkUnit(
+                id="second",
+                role="second worker",
+                goal="Run second stage",
+                prompt="Run second stage",
+                expected_output="Second result",
+            ),
+        ],
+        verification_strategy="manual-gated",
+        stop_condition="procedure_complete",
+    )
+    return WorkflowSpecBundle(
+        procedure=WorkflowProcedure(
+            mode="sequence",
+            triggers=["manual"],
+            stages=[
+                WorkflowStage(
+                    id="stage-one",
+                    purpose="Run first stage",
+                    work_unit_ids=["first"],
+                    gate="all_required_verified",
+                    on_failure="stop",
+                ),
+                WorkflowStage(
+                    id="manual-review",
+                    purpose="Require human approval before second stage",
+                    work_unit_ids=["second"],
+                    gate="manual_review",
+                    on_failure="require_human",
+                ),
+            ],
+            final_artifacts=["synthesis report"],
+        ),
+        plan=plan,
+    )
 
 
 def test_bootstrap_command_prepares_repo_plugin(tmp_path, capsys):

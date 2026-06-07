@@ -1,9 +1,9 @@
 # Dynamic Workflows For Codex
 
-[![Release](https://img.shields.io/badge/release-v0.10-blue)](CHANGELOG.md)
+[![Release](https://img.shields.io/badge/release-v0.11-blue)](CHANGELOG.md)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](pyproject.toml)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-77%20passed-brightgreen)](tests)
+[![Tests](https://img.shields.io/badge/tests-85%20passed-brightgreen)](tests)
 
 External dynamic workflow runtime for Codex.
 
@@ -76,7 +76,7 @@ For the full consumer setup, read [docs/consumer-install.md](docs/consumer-insta
 - `cdw debug`: fan out hypothesis investigators.
 - `cdw migrate`: create guarded write-heavy migration plans.
 - `cdw run`: execute saved workflow specs.
-- `cdw resume`: continue an incomplete persisted run.
+- `cdw resume`: continue an incomplete or human-approved persisted run.
 - `cdw bootstrap`: refresh repo-local plugin files and print install next steps.
 - `cdw doctor`: check clone readiness without running a real worker.
 - `cdw live-smoke`: diagnose live-mode prerequisites.
@@ -99,6 +99,17 @@ criteria, a procedure graph, and an embedded `WorkflowPlan`. The runtime uses
 that procedure graph for `cdw run`: ordered stages, verification gates, failure
 behavior, and final artifacts are part of execution, not just documentation.
 Older v2 envelopes and v1 plan-root specs still load.
+
+Stages with `manual_review` gates or `require_human` failure behavior pause
+before worker execution. The run state records `pending_human_approval`, CLI
+reports `waiting for human approval`, and the workflow continues only after:
+
+```bash
+python -m cdw resume <run-id> --adapter codex-cli --approve-human-gates
+```
+
+Each approval releases only the currently pending stage. Later human-gated
+stages pause again.
 
 `cdw plan` now supports planner modes. `static` is the default and preserves the
 old fixed planning template. `fake` writes a deterministic multi-stage dynamic
@@ -169,7 +180,7 @@ python -m cdw review "Review this branch" --adapter live --codex-command /path/t
 
 ## Project Status
 
-Current release: `v0.10`.
+Current release: `v0.11`.
 
 - v0.1: MVP runtime with plan/review/debug, fake adapter, live MCP boundary.
 - v0.2: workflow specs, resume, guarded migration, skill installer.
@@ -189,6 +200,8 @@ Current release: `v0.10`.
 - v0.10: explicit dynamic planner modes for `cdw plan`, including
   `--planner codex-cli` for validated model-generated workflow specs and
   `--planner fake` for deterministic dynamic spec tests.
+- v0.11: human approval gates that pause before manual/require-human stages and
+  resume only with `--approve-human-gates`.
 
 See [CHANGELOG.md](CHANGELOG.md) for details.
 

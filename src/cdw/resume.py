@@ -8,6 +8,16 @@ from cdw.schemas import RunState
 from cdw.state import load_run_state
 
 
-def resume_run(root: Path, run_id: str, adapter: CodexAdapter) -> RunState:
+def resume_run(
+    root: Path,
+    run_id: str,
+    adapter: CodexAdapter,
+    approve_human_gates: bool = False,
+) -> RunState:
     state = load_run_state(root, run_id)
-    return execute_existing_state(root, state, adapter)
+    return execute_existing_state(
+        root,
+        state,
+        adapter,
+        approve_human_gates=approve_human_gates,
+    )
