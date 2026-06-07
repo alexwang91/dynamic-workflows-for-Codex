@@ -151,7 +151,7 @@ class VerificationResult(BaseModel):
 class SynthesisReport(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    status: Literal["complete", "incomplete"]
+    status: Literal["complete", "incomplete", "waiting_for_human"]
     summary: str = Field(min_length=1)
     findings: list[str] = Field(default_factory=list)
     unresolved: list[str] = Field(default_factory=list)
@@ -167,3 +167,4 @@ class RunState(BaseModel):
     worker_results: list[WorkerResult] = Field(default_factory=list)
     verification_results: list[VerificationResult] = Field(default_factory=list)
     synthesis: SynthesisReport | None = None
+    pending_human_approval: str | None = None

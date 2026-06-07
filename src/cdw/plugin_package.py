@@ -43,8 +43,8 @@ def package_repo_marketplace(root: Path) -> Path:
 def _plugin_manifest() -> dict:
     return {
         "name": PLUGIN_NAME,
-        "version": "0.10.0",
-        "description": "Dynamic workflow runtime with Codex CLI planning, bootstrap, doctor checks, and skill routing.",
+        "version": "0.11.0",
+        "description": "Dynamic workflow runtime with Codex CLI planning, human approval gates, bootstrap, doctor checks, and skill routing.",
         "author": {
             "name": "Local developer",
         },
@@ -57,9 +57,9 @@ def _plugin_manifest() -> dict:
                 "Packages a Codex skill wrapper that bootstraps the repo-local "
                 "plugin marketplace, runs cdw doctor readiness checks, routes "
                 "dynamic planning and real workers through the user's codex-cli "
-                "login, and delegates review, debugging, workflow specs, "
-                "staged runs, resume, and guarded migrations to the cdw "
-                "external runtime."
+                "login, enforces human approval gates for guarded stages, and "
+                "delegates review, debugging, workflow specs, staged runs, "
+                "resume, and guarded migrations to the cdw external runtime."
             ),
             "developerName": "Local developer",
             "category": "Productivity",
@@ -68,6 +68,7 @@ def _plugin_manifest() -> dict:
                 "Bootstrap this clone for Codex dynamic workflows.",
                 "Run cdw doctor for this clone.",
                 "Create a dynamic workflow spec with Codex CLI.",
+                "Resume a workflow after human approval.",
                 "Review this branch with dynamic workflows.",
                 "Debug this flaky test with cdw.",
                 "Create and run a reusable workflow spec.",

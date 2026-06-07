@@ -50,6 +50,7 @@ def build_parser() -> argparse.ArgumentParser:
     resume_command.add_argument("--root", default=".")
     resume_command.add_argument("--adapter", choices=ADAPTER_CHOICES, default="fake")
     resume_command.add_argument("--codex-command")
+    resume_command.add_argument("--approve-human-gates", action="store_true")
     install_skill_command = subparsers.add_parser("install-skill")
     install_skill_command.add_argument("--root", default=".")
     bootstrap_command = subparsers.add_parser("bootstrap")
@@ -111,7 +112,12 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "resume":
         adapter = _build_adapter(config, codex_command=args.codex_command)
         try:
-            state = resume_run(config.root, args.run_id, adapter)
+            state = resume_run(
+                config.root,
+                args.run_id,
+                adapter,
+                approve_human_gates=args.approve_human_gates,
+            )
         except RuntimeError as exc:
             print(f"error: {exc}", file=sys.stderr)
             return 1
@@ -120,7 +126,11 @@ def main(argv: list[str] | None = None) -> int:
         bundle = load_workflow_spec_bundle(Path(args.workflow_spec))
         adapter = _build_adapter(config, codex_command=args.codex_command)
         try:
-            state = execute_workflow_bundle(bundle, config.root, adapter)
+            state = execute_workflow_bundle(
+                bundle,
+                config.root,
+                adapter,
+            )
         except RuntimeError as exc:
             print(f"error: {exc}", file=sys.stderr)
             return 1
@@ -152,7 +162,11 @@ def main(argv: list[str] | None = None) -> int:
         return 1
     adapter = _build_adapter(config, codex_command=args.codex_command)
     try:
-        state = execute_plan(plan, config.root, adapter)
+        state = execute_plan(
+            plan,
+            config.root,
+            adapter,
+        )
     except RuntimeError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
@@ -163,6 +177,14 @@ def _finish_run(state) -> int:
     print(f"run {state.run_id}")
     if state.synthesis is None or state.synthesis.status == "complete":
         return 0
+
+    if state.synthesis.status == "waiting_for_human":
+        pending = state.pending_human_approval or ", ".join(state.synthesis.unresolved)
+        print(
+            f"error: waiting for human approval before stage: {pending}",
+            file=sys.stderr,
+        )
+        return 1
 
     unresolved = ", ".join(state.synthesis.unresolved) or "unknown"
     print(f"error: workflow incomplete; unresolved: {unresolved}", file=sys.stderr)

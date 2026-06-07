@@ -93,3 +93,13 @@
 - `codex-cli` asks the user's own `codex exec` to generate a full v3 workflow spec with a strict output schema and validates it before writing.
 - Dynamic planner output accepts raw JSON or fenced JSON and rejects malformed JSON or invalid workflow specs without traceback.
 - Dynamic planner modes require `--save-spec`; planning does not execute workers.
+
+## v0.11 Behavior
+
+- Stages with `manual_review` or `require_human` pause before worker execution.
+- Paused runs persist `pending_human_approval` in `.cdw/runs/<run-id>/state.json`.
+- Synthesis status becomes `waiting_for_human` while a stage is pending approval.
+- CLI reports the pending stage and exits non-zero instead of silently continuing.
+- `cdw resume <run-id> --approve-human-gates` continues the currently pending stage.
+- Later human-gated stages pause again instead of inheriting a previous approval.
+- Guarded migration workflows stop after inventory before the migration-plan review stage until approved on resume.

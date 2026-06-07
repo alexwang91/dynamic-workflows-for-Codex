@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dynamic-workflows-for-Codex"
-version = "0.10.0"
+version = "0.11.0"
 description = "External orchestration runtime that recreates Claude-style dynamic workflows for Codex."
 readme = "README.md"
 license = { file = "LICENSE" }

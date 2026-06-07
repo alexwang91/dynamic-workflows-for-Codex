@@ -17,25 +17,51 @@ from cdw.state import create_run_state, save_run_state
 from cdw.workflow_spec import build_workflow_spec_bundle
 
 
-def execute_plan(plan: WorkflowPlan, root: Path, adapter: CodexAdapter) -> RunState:
-    return execute_workflow_bundle(build_workflow_spec_bundle(plan), root, adapter)
+def execute_plan(
+    plan: WorkflowPlan,
+    root: Path,
+    adapter: CodexAdapter,
+    approve_human_gates: bool = False,
+) -> RunState:
+    return execute_workflow_bundle(
+        build_workflow_spec_bundle(plan),
+        root,
+        adapter,
+        approve_human_gates=approve_human_gates,
+    )
 
 
 def execute_workflow_bundle(
     bundle: WorkflowSpecBundle,
     root: Path,
     adapter: CodexAdapter,
+    approve_human_gates: bool = False,
 ) -> RunState:
     state = create_run_state(bundle.plan, procedure=bundle.procedure)
     save_run_state(root, state)
 
-    execute_existing_state(root, state, adapter)
+    execute_existing_state(
+        root,
+        state,
+        adapter,
+        approve_human_gates=approve_human_gates,
+    )
     return state
 
 
-def execute_existing_state(root: Path, state: RunState, adapter: CodexAdapter) -> RunState:
+def execute_existing_state(
+    root: Path,
+    state: RunState,
+    adapter: CodexAdapter,
+    approve_human_gates: bool = False,
+) -> RunState:
     if state.procedure is not None:
-        ensure_procedure_results(root, state, adapter)
+        ensure_procedure_results(
+            root,
+            state,
+            adapter,
+            approve_human_gates=approve_human_gates,
+        )
         finalize_synthesis(root, state)
         return state
 
@@ -49,11 +75,26 @@ def ensure_procedure_results(
     root: Path,
     state: RunState,
     adapter: CodexAdapter,
+    approve_human_gates: bool = False,
 ) -> RunState:
     if state.procedure is None:
         return state
 
     for stage in state.procedure.stages:
+        if _stage_requires_human_approval(stage) and not _stage_gate_passed(
+            state,
+            stage,
+        ):
+            if state.pending_human_approval == stage.id:
+                if not approve_human_gates:
+                    save_run_state(root, state)
+                    break
+                state.pending_human_approval = None
+                save_run_state(root, state)
+            else:
+                state.pending_human_approval = stage.id
+                save_run_state(root, state)
+                break
         ensure_stage_worker_results(root, state, adapter, stage)
         ensure_stage_verification_results(root, state, adapter, stage)
         if _stage_gate_passed(state, stage):
@@ -153,6 +194,10 @@ def _stage_gate_passed(state: RunState, stage: WorkflowStage) -> bool:
     return all(work_unit_id in passed_ids for work_unit_id in required_ids)
 
 
+def _stage_requires_human_approval(stage: WorkflowStage) -> bool:
+    return stage.gate == "manual_review" or stage.on_failure == "require_human"
+
+
 def _stage_verification_results(
     state: RunState,
     stage: WorkflowStage,
@@ -166,6 +211,14 @@ def _stage_verification_results(
 
 
 def _synthesize(state: RunState) -> SynthesisReport:
+    if state.pending_human_approval:
+        return SynthesisReport(
+            status="waiting_for_human",
+            summary="Workflow is waiting for human approval before continuing.",
+            findings=[result.summary for result in state.worker_results],
+            unresolved=[state.pending_human_approval],
+        )
+
     unresolved = [
         result.work_unit_id
         for result in state.worker_results
