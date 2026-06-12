@@ -78,6 +78,7 @@ def _procedure_for_plan(plan: WorkflowPlan) -> WorkflowProcedure:
                 id=_default_stage_id(plan),
                 purpose=f"Run {plan.command.value} workflow workers",
                 work_unit_ids=[work_unit.id for work_unit in plan.work_units],
+                produces=["synthesis report"],
                 gate="all_required_verified",
                 on_failure="stop",
             )
@@ -95,8 +96,10 @@ def _migration_procedure(plan: WorkflowPlan) -> WorkflowProcedure:
                 id="migration-inventory",
                 purpose="Build a read-only inventory before write-heavy planning",
                 work_unit_ids=["inventory"],
+                produces=["migration inventory"],
                 gate="all_required_verified",
                 on_failure="stop",
+                write_policy="read-only",
             )
         )
     remaining_ids = [
@@ -108,8 +111,12 @@ def _migration_procedure(plan: WorkflowPlan) -> WorkflowProcedure:
                 id="migration-plan-review",
                 purpose="Plan and challenge guarded migration slices",
                 work_unit_ids=remaining_ids,
+                depends_on=["migration-inventory"] if "inventory" in work_unit_ids else [],
+                consumes=["migration inventory"] if "inventory" in work_unit_ids else [],
+                produces=["guarded patch plan", "migration risk review"],
                 gate="manual_review",
                 on_failure="require_human",
+                write_policy="guarded",
             )
         )
     return WorkflowProcedure(

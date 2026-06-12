@@ -114,3 +114,14 @@
 - `cdw runs --json` returns parseable run summary objects.
 - Missing run ids produce a user-facing `run not found` error without traceback.
 - The packaged skill inspects run status before resuming existing run ids.
+
+## v0.13 Behavior
+
+- Workflow stages can declare `depends_on`, `consumes`, `produces`, and per-stage `write_policy`.
+- Workflow spec validation rejects unknown, self, or out-of-order stage dependencies.
+- Workflow spec validation rejects consumed artifacts unless they are produced by declared dependency stages.
+- Guarded and write-heavy stages require human approval gates.
+- Top-level write-heavy specs require human approval and at least one human-gated stage.
+- Runtime stops before a dependent stage when prerequisite stage gates have not passed.
+- Generated migration specs explicitly model inventory artifacts, guarded plan-review dependencies, and stricter write-heavy boundaries.
+- Codex CLI dynamic planner output schema includes dependency, artifact, and stage write-policy fields.

@@ -93,6 +93,11 @@ task-specific workflow spec from a broad request. Use `--planner fake` for
 deterministic demos and tests. The default `--planner static` preserves the
 older fixed planning template.
 
+Saved workflow specs can express stage dependencies, consumed and produced
+artifacts, and per-stage write-policy boundaries. The runtime will not run a
+dependent stage until its prerequisite stages pass their gates, and write-heavy
+workflow specs require human approval boundaries.
+
 Use `cdw status <run-id>` before resuming a workflow. It reports the synthesis
 status, pending human approval stage, state path, and adapter-aware approval
 resume command. Use `cdw status <run-id> --json` or `cdw runs --json` when a

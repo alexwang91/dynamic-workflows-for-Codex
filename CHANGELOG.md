@@ -2,6 +2,17 @@
 
 All notable changes to `dynamic-workflows-for-Codex` are documented here.
 
+## v0.13 - 2026-06-12
+
+- Added stage-level `depends_on`, `consumes`, `produces`, and `write_policy` fields to v3 workflow specs.
+- Added validation for unknown, self, and out-of-order stage dependencies.
+- Added artifact-flow validation so consumed artifacts must come from declared dependency stages.
+- Added stricter guarded/write-heavy boundaries requiring human gates and top-level human approval for write-heavy specs.
+- Runtime now stops before dependent stages when prerequisite gates have not passed.
+- Migration specs now make inventory artifacts and guarded migration-plan review dependencies explicit.
+- Updated the Codex CLI dynamic planner schema and prompt to express dependencies, artifacts, and stage write policies.
+- Bumped package and plugin metadata to `0.13.0`.
+
 ## v0.12 - 2026-06-07
 
 - Added `cdw status <run-id>` for read-only persisted run inspection.

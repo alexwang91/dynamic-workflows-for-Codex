@@ -1,7 +1,7 @@
 {
   "name": "dynamic-workflows-for-codex",
-  "version": "0.12.0",
-  "description": "Dynamic workflow runtime with Codex CLI planning, run status inspection, human approval gates, bootstrap, doctor checks, and skill routing.",
+  "version": "0.13.0",
+  "description": "Dynamic workflow runtime with Codex CLI planning, run status inspection, human approval gates, stage dependencies, artifact flow, bootstrap, doctor checks, and skill routing.",
   "author": {
     "name": "Local developer"
   },
@@ -17,7 +17,7 @@
   "interface": {
     "displayName": "Dynamic Workflows for Codex",
     "shortDescription": "Bootstrap and route Codex dynamic workflows.",
-    "longDescription": "Packages a Codex skill wrapper that bootstraps the repo-local plugin marketplace, runs cdw doctor readiness checks, routes dynamic planning and real workers through the user's codex-cli login, exposes run status inspection for resumable workflows, enforces human approval gates for guarded stages, and delegates review, debugging, workflow specs, staged runs, resume, and guarded migrations to the cdw external runtime.",
+    "longDescription": "Packages a Codex skill wrapper that bootstraps the repo-local plugin marketplace, runs cdw doctor readiness checks, routes dynamic planning and real workers through the user's codex-cli login, exposes run status inspection for resumable workflows, enforces human approval gates for guarded stages, and delegates review, debugging, workflow specs, staged runs, resume, and guarded migrations to the cdw external runtime. Workflow specs can express stage dependencies, consumed and produced artifacts, and stricter write-policy boundaries for write-heavy work.",
     "developerName": "Local developer",
     "category": "Productivity",
     "capabilities": [
@@ -28,6 +28,7 @@
       "Bootstrap this clone for Codex dynamic workflows.",
       "Run cdw doctor for this clone.",
       "Create a dynamic workflow spec with Codex CLI.",
+      "Inspect workflow spec stage dependencies and artifacts.",
       "Inspect recent workflow run status.",
       "Resume a workflow after human approval.",
       "Review this branch with dynamic workflows.",
