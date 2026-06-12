@@ -2,6 +2,16 @@
 
 All notable changes to `dynamic-workflows-for-Codex` are documented here.
 
+## v0.12 - 2026-06-07
+
+- Added `cdw status <run-id>` for read-only persisted run inspection.
+- Added `cdw runs` for listing recent workflow runs newest first.
+- Added `--json` output for `status` and `runs` so plugin skills can route resume decisions programmatically.
+- Added pending human approval and approval resume hints to status output.
+- Persisted the CLI adapter name so status resume hints keep using the right execution backend.
+- Updated packaged skill routing to inspect run status before resuming.
+- Bumped package and plugin metadata to `0.12.0`.
+
 ## v0.11 - 2026-06-07
 
 - Added runtime pauses before `manual_review` and `require_human` stages.

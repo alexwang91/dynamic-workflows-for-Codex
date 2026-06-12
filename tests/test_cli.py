@@ -309,6 +309,104 @@ def test_resume_can_approve_human_gates(tmp_path, capsys):
     assert f"run {run_id}" in captured.out
 
 
+def test_status_reports_waiting_human_run(tmp_path, capsys):
+    spec_path = tmp_path / "manual.workflow.json"
+    save_workflow_spec_bundle(spec_path, _manual_gate_bundle())
+    main(["run", str(spec_path), "--root", str(tmp_path)])
+    run_id = capsys.readouterr().out.strip().split()[-1]
+
+    exit_code = main(["status", run_id, "--root", str(tmp_path)])
+
+    captured = capsys.readouterr()
+
+    assert exit_code == 0
+    assert f"run {run_id}" in captured.out
+    assert "status waiting_for_human" in captured.out
+    assert "adapter fake" in captured.out
+    assert "pending manual-review" in captured.out
+    assert (
+        f"resume python -m cdw resume {run_id} --adapter fake --approve-human-gates"
+        in captured.out
+    )
+    assert "state " in captured.out
+
+
+def test_status_json_reports_waiting_human_run(tmp_path, capsys):
+    spec_path = tmp_path / "manual.workflow.json"
+    save_workflow_spec_bundle(spec_path, _manual_gate_bundle())
+    main(["run", str(spec_path), "--root", str(tmp_path)])
+    run_id = capsys.readouterr().out.strip().split()[-1]
+
+    exit_code = main(["status", run_id, "--root", str(tmp_path), "--json"])
+
+    captured = capsys.readouterr()
+    data = json.loads(captured.out)
+
+    assert exit_code == 0
+    assert data["run_id"] == run_id
+    assert data["status"] == "waiting_for_human"
+    assert data["adapter"] == "fake"
+    assert data["pending_human_approval"] == "manual-review"
+    assert data["worker_count"] == 1
+    assert data["verification_count"] == 1
+    assert data["resume_command"] == (
+        f"python -m cdw resume {run_id} --adapter fake --approve-human-gates"
+    )
+
+
+def test_status_reports_missing_run_without_traceback(tmp_path, capsys):
+    exit_code = main(["status", "missing", "--root", str(tmp_path)])
+
+    captured = capsys.readouterr()
+
+    assert exit_code == 1
+    assert "error: run not found: missing" in captured.err
+
+
+def test_status_reports_corrupt_run_without_traceback(tmp_path, capsys):
+    state_dir = tmp_path / ".cdw" / "runs" / "corrupt"
+    state_dir.mkdir(parents=True)
+    (state_dir / "state.json").write_text("{bad json", encoding="utf-8")
+
+    exit_code = main(["status", "corrupt", "--root", str(tmp_path)])
+
+    captured = capsys.readouterr()
+
+    assert exit_code == 1
+    assert "error:" in captured.err
+    assert "Traceback" not in captured.err
+
+
+def test_runs_lists_existing_runs(tmp_path, capsys):
+    main(["review", "Review branch", "--root", str(tmp_path), "--adapter", "fake"])
+    first_run_id = capsys.readouterr().out.strip().split()[-1]
+    main(["debug", "Debug branch", "--root", str(tmp_path), "--adapter", "fake"])
+    second_run_id = capsys.readouterr().out.strip().split()[-1]
+
+    exit_code = main(["runs", "--root", str(tmp_path)])
+
+    captured = capsys.readouterr()
+    lines = captured.out.strip().splitlines()
+
+    assert exit_code == 0
+    assert lines[0].startswith(f"run {second_run_id} status complete command debug")
+    assert lines[1].startswith(f"run {first_run_id} status complete command review")
+
+
+def test_runs_json_lists_existing_runs(tmp_path, capsys):
+    main(["review", "Review branch", "--root", str(tmp_path), "--adapter", "fake"])
+    run_id = capsys.readouterr().out.strip().split()[-1]
+
+    exit_code = main(["runs", "--root", str(tmp_path), "--json"])
+
+    captured = capsys.readouterr()
+    data = json.loads(captured.out)
+
+    assert exit_code == 0
+    assert data[0]["run_id"] == run_id
+    assert data[0]["status"] == "complete"
+
+
 def test_migrate_waits_for_human_approval_before_guarded_stage(tmp_path, capsys):
     exit_code = main(
         [

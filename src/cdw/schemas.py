@@ -167,4 +167,5 @@ class RunState(BaseModel):
     worker_results: list[WorkerResult] = Field(default_factory=list)
     verification_results: list[VerificationResult] = Field(default_factory=list)
     synthesis: SynthesisReport | None = None
+    adapter: str | None = None
     pending_human_approval: str | None = None

@@ -24,8 +24,9 @@ def test_skill_content_routes_dynamic_workflow_tasks():
     assert "## Trigger Routing" in content
     assert "## Operating Loop" in content
     assert "## Adapter Policy" in content
-    assert "## Resume First" in content
+    assert "## Status First" in content
     assert "cdw bootstrap --root <repo>" in content
     assert "cdw doctor --root <repo>" in content
+    assert "cdw status <run-id>" in content
     assert "--adapter codex-cli" in content
     assert "Do not ask for or assume the project author's API key" in content

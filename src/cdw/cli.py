@@ -5,6 +5,8 @@ import json
 import sys
 from pathlib import Path
 
+from pydantic import ValidationError
+
 from cdw.codex_mcp import FakeCodexAdapter
 from cdw.codex_command import resolve_codex_command
 from cdw.config import RuntimeConfig
@@ -14,6 +16,7 @@ from cdw.planner import build_plan
 from cdw.plugin_package import package_plugin
 from cdw.plugin_package import package_repo_marketplace
 from cdw.resume import resume_run
+from cdw.run_status import list_run_summaries, summarize_run
 from cdw.runtime import execute_plan, execute_workflow_bundle
 from cdw.skill import install_skill
 from cdw.workflow_spec import (
@@ -45,6 +48,13 @@ def build_parser() -> argparse.ArgumentParser:
     run_command.add_argument("--root", default=".")
     run_command.add_argument("--adapter", choices=ADAPTER_CHOICES, default="fake")
     run_command.add_argument("--codex-command")
+    status_command = subparsers.add_parser("status")
+    status_command.add_argument("run_id")
+    status_command.add_argument("--root", default=".")
+    status_command.add_argument("--json", action="store_true", dest="json_output")
+    runs_command = subparsers.add_parser("runs")
+    runs_command.add_argument("--root", default=".")
+    runs_command.add_argument("--json", action="store_true", dest="json_output")
     resume_command = subparsers.add_parser("resume")
     resume_command.add_argument("run_id")
     resume_command.add_argument("--root", default=".")
@@ -108,6 +118,25 @@ def main(argv: list[str] | None = None) -> int:
         path = package_plugin(Path(args.output))
         print(f"plugin {path}")
         return 0
+    if args.command == "status":
+        try:
+            summary = summarize_run(Path(args.root), args.run_id)
+        except (RuntimeError, OSError, ValueError, ValidationError) as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 1
+        if args.json_output:
+            print(json.dumps(summary.to_dict(), indent=2))
+        else:
+            print(_format_status(summary))
+        return 0
+    if args.command == "runs":
+        summaries = list_run_summaries(Path(args.root))
+        if args.json_output:
+            print(json.dumps([summary.to_dict() for summary in summaries], indent=2))
+        else:
+            for summary in summaries:
+                print(_format_run_line(summary))
+        return 0
     config = RuntimeConfig(root=Path(args.root), adapter=args.adapter)
     if args.command == "resume":
         adapter = _build_adapter(config, codex_command=args.codex_command)
@@ -130,6 +159,7 @@ def main(argv: list[str] | None = None) -> int:
                 bundle,
                 config.root,
                 adapter,
+                adapter_name=args.adapter,
             )
         except RuntimeError as exc:
             print(f"error: {exc}", file=sys.stderr)
@@ -166,6 +196,7 @@ def main(argv: list[str] | None = None) -> int:
             plan,
             config.root,
             adapter,
+            adapter_name=args.adapter,
         )
     except RuntimeError as exc:
         print(f"error: {exc}", file=sys.stderr)
@@ -189,6 +220,32 @@ def _finish_run(state) -> int:
     unresolved = ", ".join(state.synthesis.unresolved) or "unknown"
     print(f"error: workflow incomplete; unresolved: {unresolved}", file=sys.stderr)
     return 1
+
+
+def _format_status(summary) -> str:
+    lines = [
+        f"run {summary.run_id}",
+        f"status {summary.status}",
+        f"command {summary.command}",
+        f"request {summary.request}",
+    ]
+    if summary.adapter is not None:
+        lines.append(f"adapter {summary.adapter}")
+    if summary.pending_human_approval is not None:
+        lines.append(f"pending {summary.pending_human_approval}")
+    if summary.resume_command is not None:
+        lines.append(f"resume {summary.resume_command}")
+    lines.append(f"state {summary.state_path}")
+    return "\n".join(lines)
+
+
+def _format_run_line(summary) -> str:
+    line = f"run {summary.run_id} status {summary.status} command {summary.command}"
+    if summary.adapter is not None:
+        line += f" adapter {summary.adapter}"
+    if summary.pending_human_approval is not None:
+        line += f" pending {summary.pending_human_approval}"
+    return line
 
 
 def _build_adapter(config: RuntimeConfig, codex_command: str | None = None):
