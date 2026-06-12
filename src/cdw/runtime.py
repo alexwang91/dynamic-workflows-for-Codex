@@ -88,6 +88,8 @@ def ensure_procedure_results(
         return state
 
     for stage in state.procedure.stages:
+        if not _stage_dependencies_passed(state, state.procedure.stages, stage):
+            break
         if _stage_requires_human_approval(stage) and not _stage_gate_passed(
             state,
             stage,
@@ -199,6 +201,21 @@ def _stage_gate_passed(state: RunState, stage: WorkflowStage) -> bool:
     if not required_ids:
         required_ids = stage.work_unit_ids
     return all(work_unit_id in passed_ids for work_unit_id in required_ids)
+
+
+def _stage_dependencies_passed(
+    state: RunState,
+    stages: list[WorkflowStage],
+    stage: WorkflowStage,
+) -> bool:
+    if not stage.depends_on:
+        return True
+
+    stages_by_id = {candidate.id: candidate for candidate in stages}
+    return all(
+        _stage_gate_passed(state, stages_by_id[dependency_id])
+        for dependency_id in stage.depends_on
+    )
 
 
 def _stage_requires_human_approval(stage: WorkflowStage) -> bool:

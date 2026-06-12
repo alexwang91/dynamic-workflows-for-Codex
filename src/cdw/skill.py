@@ -16,7 +16,7 @@ def install_skill(root: Path) -> Path:
 def build_skill_content(skill_name: str = SKILL_NAME) -> str:
     return f"""---
 name: {skill_name}
-description: Use when a Codex task needs dynamic workflow orchestration for branch review, debugging, resumable workflow specs, run status inspection, guarded migrations, staged procedure execution, or clone-user readiness checks.
+description: Use when a Codex task needs dynamic workflow orchestration for branch review, debugging, resumable workflow specs, run status inspection, guarded migrations, staged procedure execution with stage dependencies, artifact flow, write-policy boundaries, or clone-user readiness checks.
 ---
 
 # Dynamic Workflows For Codex
@@ -31,6 +31,8 @@ Use this skill when the user asks for any of these:
 - Debugging that needs parallel hypotheses or repeatable investigation.
 - Guarded migrations, write-heavy refactors, or ownership-bounded changes.
 - Reusable workflow specs, staged procedure graphs, or resumable runs.
+- Workflow specs that need explicit stage dependencies, artifact flow, or
+  write-policy boundaries.
 - Dynamic workflow planning from a broad request.
 - Run status inspection for interrupted, paused, or recently completed workflows.
 - Clone/install readiness checks for this plugin or runtime.
@@ -85,6 +87,9 @@ the same adapter policy below.
 - Use `--planner fake` for deterministic tests and demos.
 - Dynamic planner modes require `--save-spec`; planning writes a validated spec
   and does not execute workers.
+- v0.13 workflow specs can express stage dependencies, consumed and produced
+  artifact flow, and per-stage write-policy boundaries. Treat those fields as
+  part of the execution contract, not decorative notes.
 
 ## Approval Policy
 

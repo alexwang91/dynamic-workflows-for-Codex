@@ -63,6 +63,18 @@ def test_runtime_continues_later_stage_when_stage_allows_failure(tmp_path):
     assert "first" in state.synthesis.unresolved
 
 
+def test_runtime_stops_dependent_stage_when_dependency_gate_fails(tmp_path):
+    bundle = _dependent_stage_bundle(on_failure="continue")
+    adapter = FakeCodexAdapter(fail_work_unit_ids={"first"})
+
+    state = execute_workflow_bundle(bundle, tmp_path, adapter)
+
+    assert [result.work_unit_id for result in state.worker_results] == ["first"]
+    assert state.synthesis is not None
+    assert state.synthesis.status == "incomplete"
+    assert "first" in state.synthesis.unresolved
+
+
 def test_runtime_persists_procedure_for_staged_run(tmp_path):
     bundle = _two_stage_bundle(on_failure="stop")
 
@@ -232,6 +244,15 @@ def _manual_gate_bundle() -> WorkflowSpecBundle:
         gate="manual_review",
         on_failure="require_human",
     )
+    return bundle
+
+
+def _dependent_stage_bundle(on_failure: str) -> WorkflowSpecBundle:
+    bundle = _two_stage_bundle(on_failure=on_failure)
+    assert bundle.procedure is not None
+    bundle.procedure.stages[0].produces = ["first artifact"]
+    bundle.procedure.stages[1].depends_on = ["stage-one"]
+    bundle.procedure.stages[1].consumes = ["first artifact"]
     return bundle
 
 

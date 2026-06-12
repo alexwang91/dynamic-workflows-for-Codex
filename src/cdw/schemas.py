@@ -58,6 +58,7 @@ class WorkflowSpecConstraints(BaseModel):
 StageGate = Literal["all_required_verified", "any_verified", "manual_review"]
 FailureBehavior = Literal["stop", "continue", "require_human"]
 ProcedureMode = Literal["single-stage", "fan-out", "sequence", "guarded"]
+StageWritePolicy = Literal["read-only", "guarded", "write-heavy"]
 
 
 class WorkflowStage(BaseModel):
@@ -66,8 +67,12 @@ class WorkflowStage(BaseModel):
     id: str = Field(min_length=1)
     purpose: str = Field(min_length=1)
     work_unit_ids: list[str] = Field(min_length=1)
+    depends_on: list[str] = Field(default_factory=list)
+    consumes: list[str] = Field(default_factory=list)
+    produces: list[str] = Field(default_factory=list)
     gate: StageGate = "all_required_verified"
     on_failure: FailureBehavior = "stop"
+    write_policy: StageWritePolicy = "read-only"
 
 
 class WorkflowProcedure(BaseModel):
@@ -97,6 +102,13 @@ class WorkflowSpecBundle(BaseModel):
         if self.procedure is None:
             return self
 
+        stage_ids = [stage.id for stage in self.procedure.stages]
+        duplicate_stage_ids = sorted(
+            stage_id for stage_id in set(stage_ids) if stage_ids.count(stage_id) > 1
+        )
+        if duplicate_stage_ids:
+            raise ValueError(f"duplicate stage ids: {duplicate_stage_ids}")
+
         known_ids = {work_unit.id for work_unit in self.plan.work_units}
         referenced_ids = []
         for stage in self.procedure.stages:
@@ -116,6 +128,63 @@ class WorkflowSpecBundle(BaseModel):
         missing_ids = sorted(known_ids - set(referenced_ids))
         if missing_ids:
             raise ValueError(f"unstaged work unit ids: {missing_ids}")
+
+        all_stage_ids = set(stage_ids)
+        seen_stage_ids: set[str] = set()
+        produced_by: dict[str, set[str]] = {}
+        for stage in self.procedure.stages:
+            dependency_ids = set(stage.depends_on)
+            if stage.id in dependency_ids:
+                raise ValueError("stage cannot depend on itself")
+
+            unknown_dependency_ids = sorted(dependency_ids - all_stage_ids)
+            if unknown_dependency_ids:
+                raise ValueError(
+                    f"unknown stage dependency ids: {unknown_dependency_ids}"
+                )
+
+            out_of_order_dependency_ids = sorted(dependency_ids - seen_stage_ids)
+            if out_of_order_dependency_ids:
+                raise ValueError(
+                    "stage dependencies must reference earlier stages: "
+                    f"{out_of_order_dependency_ids}"
+                )
+
+            for artifact in stage.consumes:
+                producer_stage_ids = produced_by.get(artifact, set())
+                if not producer_stage_ids.intersection(dependency_ids):
+                    raise ValueError(
+                        "consumed artifacts must be produced by declared "
+                        f"dependencies: {artifact}"
+                    )
+
+            if stage.write_policy in {"guarded", "write-heavy"} and not (
+                stage.gate == "manual_review" or stage.on_failure == "require_human"
+            ):
+                raise ValueError("guarded stages require human approval gates")
+
+            if stage.write_policy == "write-heavy" and (
+                not stage.depends_on or not stage.consumes
+            ):
+                raise ValueError(
+                    "write-heavy stages require dependencies and consumed artifacts"
+                )
+
+            for artifact in stage.produces:
+                produced_by.setdefault(artifact, set()).add(stage.id)
+            seen_stage_ids.add(stage.id)
+
+        if self.constraints.write_policy == "write-heavy":
+            if not self.constraints.requires_human_approval:
+                raise ValueError("write-heavy specs require human approval")
+            human_gated_stages = [
+                stage
+                for stage in self.procedure.stages
+                if stage.gate == "manual_review"
+                or stage.on_failure == "require_human"
+            ]
+            if not human_gated_stages:
+                raise ValueError("write-heavy specs require a human-gated stage")
 
         return self
 

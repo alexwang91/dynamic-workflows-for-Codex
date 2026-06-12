@@ -29,4 +29,7 @@ def test_skill_content_routes_dynamic_workflow_tasks():
     assert "cdw doctor --root <repo>" in content
     assert "cdw status <run-id>" in content
     assert "--adapter codex-cli" in content
+    assert "stage dependencies" in content
+    assert "artifact flow" in content
+    assert "write-policy boundaries" in content
     assert "Do not ask for or assume the project author's API key" in content

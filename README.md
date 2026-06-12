@@ -1,9 +1,9 @@
 # Dynamic Workflows For Codex
 
-[![Release](https://img.shields.io/badge/release-v0.12-blue)](CHANGELOG.md)
+[![Release](https://img.shields.io/badge/release-v0.13-blue)](CHANGELOG.md)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](pyproject.toml)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-96%20passed-brightgreen)](tests)
+[![Tests](https://img.shields.io/badge/tests-106%20passed-brightgreen)](tests)
 
 External dynamic workflow runtime for Codex.
 
@@ -104,6 +104,12 @@ that procedure graph for `cdw run`: ordered stages, verification gates, failure
 behavior, and final artifacts are part of execution, not just documentation.
 Older v2 envelopes and v1 plan-root specs still load.
 
+Stages can now declare dependencies, artifacts they consume and produce, and a
+per-stage write policy. Dependent stages do not run until their prerequisite
+stages pass verification gates. Write-heavy specs require human approval, and
+guarded/write-heavy stages must be behind manual review or require-human
+failure behavior.
+
 Stages with `manual_review` gates or `require_human` failure behavior pause
 before worker execution. The run state records `pending_human_approval`, CLI
 reports `waiting for human approval`, and the workflow continues only after:
@@ -125,6 +131,8 @@ old fixed planning template. `fake` writes a deterministic multi-stage dynamic
 spec for tests and demos. `codex-cli` asks the user's own Codex CLI to design a
 full v3 workflow spec using a strict output schema, validates it locally, and
 writes it only when `--save-spec` is provided.
+That schema includes stage dependencies, consumed artifacts, produced artifacts,
+and stage write policies.
 
 ## Modes
 
@@ -189,7 +197,7 @@ python -m cdw review "Review this branch" --adapter live --codex-command /path/t
 
 ## Project Status
 
-Current release: `v0.12`.
+Current release: `v0.13`.
 
 - v0.1: MVP runtime with plan/review/debug, fake adapter, live MCP boundary.
 - v0.2: workflow specs, resume, guarded migration, skill installer.
@@ -213,6 +221,8 @@ Current release: `v0.12`.
   resume only with `--approve-human-gates`.
 - v0.12: run status UX with `cdw status`, `cdw runs`, and JSON summaries for
   resume-aware skills.
+- v0.13: stronger workflow spec expression with stage dependencies, artifact
+  flow, per-stage write policy, and stricter write-heavy migration boundaries.
 
 See [CHANGELOG.md](CHANGELOG.md) for details.
 

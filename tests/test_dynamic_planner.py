@@ -24,6 +24,10 @@ def test_fake_dynamic_planner_builds_multi_stage_spec(tmp_path):
     assert bundle.procedure is not None
     assert len(bundle.procedure.stages) >= 2
     assert bundle.procedure.stages[0].work_unit_ids == ["context"]
+    assert bundle.procedure.stages[0].produces == ["scope summary"]
+    assert bundle.procedure.stages[1].depends_on == ["context"]
+    assert bundle.procedure.stages[1].consumes == ["scope summary"]
+    assert "validated workflow spec" in bundle.procedure.stages[1].produces
     assert bundle.constraints.write_policy == "read-only"
 
 
@@ -110,6 +114,13 @@ def test_codex_cli_dynamic_planner_uses_current_codex_exec_args(
     assert "plan" in calls["schema"]["properties"]
     assert "procedure" in calls["schema"]["properties"]
     assert "procedure" in calls["schema"]["required"]
+    stage_schema = calls["schema"]["properties"]["procedure"]["properties"]["stages"][
+        "items"
+    ]
+    assert "depends_on" in stage_schema["required"]
+    assert "consumes" in stage_schema["required"]
+    assert "produces" in stage_schema["required"]
+    assert "write_policy" in stage_schema["required"]
     assert "work_units" in calls["schema"]["properties"]["plan"]["required"]
 
 

@@ -156,15 +156,21 @@ def _fake_dynamic_workflow_spec(request: str) -> WorkflowSpecBundle:
                     id="context",
                     purpose="Map scope and constraints before designing workers",
                     work_unit_ids=["context"],
+                    produces=["scope summary"],
                     gate="all_required_verified",
                     on_failure="stop",
+                    write_policy="read-only",
                 ),
                 WorkflowStage(
                     id="workflow-design",
                     purpose="Design and challenge the dynamic workflow",
                     work_unit_ids=["workflow", "risk-review"],
+                    depends_on=["context"],
+                    consumes=["scope summary"],
+                    produces=["validated workflow spec", "risk findings"],
                     gate="all_required_verified",
                     on_failure="stop",
+                    write_policy="read-only",
                 ),
             ],
             final_artifacts=["validated workflow spec", "synthesis report"],
@@ -195,9 +201,12 @@ def _dynamic_planner_prompt(request: str) -> str:
         "- constraints: write_policy, allowed_paths, forbidden_paths, requires_human_approval\n"
         "- acceptance_criteria: string array\n"
         "- procedure: mode, triggers, stages, final_artifacts\n"
+        "- procedure.stages: id, purpose, work_unit_ids, depends_on, consumes, produces, gate, on_failure, write_policy\n"
         "- plan: schema_version, command, request, pattern, work_units, verification_strategy, stop_condition, max_iterations\n"
         "Use plan.command = \"plan\". Every work unit id must appear exactly once in procedure stages.\n"
+        "Stage dependencies must reference earlier stages. Consumed artifacts must be produced by declared dependency stages.\n"
         "Default to read-only unless the request clearly requires guarded or write-heavy planning.\n"
+        "Use manual_review or require_human gates for guarded or write-heavy stages.\n"
         f"Request: {request}\n"
     )
 
@@ -231,6 +240,9 @@ def _workflow_spec_output_schema() -> dict:
             "id": {"type": "string"},
             "purpose": {"type": "string"},
             "work_unit_ids": string_array,
+            "depends_on": string_array,
+            "consumes": string_array,
+            "produces": string_array,
             "gate": {
                 "type": "string",
                 "enum": ["all_required_verified", "any_verified", "manual_review"],
@@ -239,8 +251,22 @@ def _workflow_spec_output_schema() -> dict:
                 "type": "string",
                 "enum": ["stop", "continue", "require_human"],
             },
+            "write_policy": {
+                "type": "string",
+                "enum": ["read-only", "guarded", "write-heavy"],
+            },
         },
-        "required": ["id", "purpose", "work_unit_ids", "gate", "on_failure"],
+        "required": [
+            "id",
+            "purpose",
+            "work_unit_ids",
+            "depends_on",
+            "consumes",
+            "produces",
+            "gate",
+            "on_failure",
+            "write_policy",
+        ],
     }
     return {
         "type": "object",
