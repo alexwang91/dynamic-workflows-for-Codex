@@ -7,6 +7,7 @@ from pathlib import Path
 
 from pydantic import ValidationError
 
+from cdw.artifacts import read_artifact
 from cdw.codex_mcp import FakeCodexAdapter
 from cdw.codex_command import resolve_codex_command
 from cdw.config import RuntimeConfig
@@ -19,6 +20,7 @@ from cdw.resume import resume_run
 from cdw.run_status import list_run_summaries, summarize_run
 from cdw.runtime import execute_plan, execute_workflow_bundle
 from cdw.skill import install_skill
+from cdw.state import load_run_state
 from cdw.workflow_spec import (
     load_workflow_spec_bundle,
     save_workflow_spec,
@@ -55,6 +57,15 @@ def build_parser() -> argparse.ArgumentParser:
     runs_command = subparsers.add_parser("runs")
     runs_command.add_argument("--root", default=".")
     runs_command.add_argument("--json", action="store_true", dest="json_output")
+    artifacts_command = subparsers.add_parser("artifacts")
+    artifacts_command.add_argument("run_id")
+    artifacts_command.add_argument("--root", default=".")
+    artifacts_command.add_argument("--json", action="store_true", dest="json_output")
+    artifact_command = subparsers.add_parser("artifact")
+    artifact_command.add_argument("run_id")
+    artifact_command.add_argument("artifact_name")
+    artifact_command.add_argument("--root", default=".")
+    artifact_command.add_argument("--stage-id")
     resume_command = subparsers.add_parser("resume")
     resume_command.add_argument("run_id")
     resume_command.add_argument("--root", default=".")
@@ -136,6 +147,33 @@ def main(argv: list[str] | None = None) -> int:
         else:
             for summary in summaries:
                 print(_format_run_line(summary))
+        return 0
+    if args.command == "artifacts":
+        try:
+            summary = summarize_run(Path(args.root), args.run_id)
+        except (RuntimeError, OSError, ValueError, ValidationError) as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 1
+        if args.json_output:
+            print(json.dumps(summary.artifacts, indent=2))
+        else:
+            for artifact in summary.artifacts:
+                print(_format_artifact_line(artifact))
+        return 0
+    if args.command == "artifact":
+        try:
+            state = load_run_state(Path(args.root), args.run_id)
+            print(
+                read_artifact(
+                    Path(args.root),
+                    state,
+                    args.artifact_name,
+                    stage_id=args.stage_id,
+                )
+            )
+        except (RuntimeError, OSError, ValueError, ValidationError) as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 1
         return 0
     config = RuntimeConfig(root=Path(args.root), adapter=args.adapter)
     if args.command == "resume":
@@ -235,6 +273,9 @@ def _format_status(summary) -> str:
         lines.append(f"pending {summary.pending_human_approval}")
     if summary.resume_command is not None:
         lines.append(f"resume {summary.resume_command}")
+    if summary.artifact_count:
+        lines.append(f"artifacts {summary.artifact_count}")
+        lines.extend(_format_artifact_line(artifact) for artifact in summary.artifacts)
     lines.append(f"state {summary.state_path}")
     return "\n".join(lines)
 
@@ -245,7 +286,16 @@ def _format_run_line(summary) -> str:
         line += f" adapter {summary.adapter}"
     if summary.pending_human_approval is not None:
         line += f" pending {summary.pending_human_approval}"
+    if summary.artifact_count:
+        line += f" artifacts {summary.artifact_count}"
     return line
+
+
+def _format_artifact_line(artifact: dict[str, object]) -> str:
+    return (
+        f"artifact {artifact['name']} stage {artifact['stage_id']} "
+        f"path {artifact['path']}"
+    )
 
 
 def _build_adapter(config: RuntimeConfig, codex_command: str | None = None):

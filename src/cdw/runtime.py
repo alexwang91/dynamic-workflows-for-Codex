@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from cdw.artifacts import consumed_artifact_context, write_stage_artifacts
 from cdw.codex_mcp import CodexAdapter
 from cdw.schemas import (
     RunState,
@@ -107,6 +108,8 @@ def ensure_procedure_results(
         ensure_stage_worker_results(root, state, adapter, stage)
         ensure_stage_verification_results(root, state, adapter, stage)
         if _stage_gate_passed(state, stage):
+            write_stage_artifacts(root, state, stage)
+            save_run_state(root, state)
             continue
         if stage.on_failure != "continue":
             break
@@ -147,10 +150,22 @@ def ensure_stage_worker_results(
 ) -> RunState:
     completed = {result.work_unit_id for result in state.worker_results}
     work_units = {work_unit.id: work_unit for work_unit in state.plan.work_units}
+    artifact_context = consumed_artifact_context(root, state, stage)
     for work_unit_id in stage.work_unit_ids:
         if work_unit_id in completed:
             continue
-        worker_result = adapter.run_worker(work_units[work_unit_id])
+        work_unit = work_units[work_unit_id]
+        if artifact_context:
+            work_unit = work_unit.model_copy(
+                update={
+                    "prompt": (
+                        f"{work_unit.prompt}\n\n"
+                        "Use these verified upstream artifacts as context:\n"
+                        f"{artifact_context}"
+                    )
+                }
+            )
+        worker_result = adapter.run_worker(work_unit)
         state.worker_results.append(worker_result)
         save_run_state(root, state)
     return state

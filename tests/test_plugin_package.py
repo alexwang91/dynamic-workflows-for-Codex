@@ -16,7 +16,7 @@ def test_package_plugin_writes_manifest_and_skill(tmp_path):
 
     assert path == tmp_path / "dynamic-workflows-for-codex"
     assert manifest["name"] == "dynamic-workflows-for-codex"
-    assert manifest["version"] == "0.13.0"
+    assert manifest["version"] == "0.14.0"
     assert manifest["skills"] == "./skills/"
     assert "doctor" in manifest["interface"]["longDescription"]
     assert "codex-cli" in manifest["interface"]["longDescription"]
@@ -25,6 +25,8 @@ def test_package_plugin_writes_manifest_and_skill(tmp_path):
     assert "human approval gates" in manifest["interface"]["longDescription"]
     assert "stage dependencies" in manifest["interface"]["longDescription"]
     assert "produced artifacts" in manifest["interface"]["longDescription"]
+    assert "persisted under .cdw runs" in manifest["interface"]["longDescription"]
+    assert "dependent stage prompts" in manifest["interface"]["longDescription"]
     assert "write-policy boundaries" in manifest["interface"]["longDescription"]
     assert "workflow specs" in manifest["interface"]["longDescription"]
     assert "runtime owns orchestration" in content

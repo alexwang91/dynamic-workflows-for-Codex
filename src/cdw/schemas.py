@@ -226,6 +226,16 @@ class SynthesisReport(BaseModel):
     unresolved: list[str] = Field(default_factory=list)
 
 
+class ArtifactRecord(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str = Field(min_length=1)
+    stage_id: str = Field(min_length=1)
+    path: str = Field(min_length=1)
+    content_type: Literal["text/markdown"] = "text/markdown"
+    source_work_unit_ids: list[str] = Field(default_factory=list)
+
+
 class RunState(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -235,6 +245,7 @@ class RunState(BaseModel):
     procedure: WorkflowProcedure | None = None
     worker_results: list[WorkerResult] = Field(default_factory=list)
     verification_results: list[VerificationResult] = Field(default_factory=list)
+    artifacts: list[ArtifactRecord] = Field(default_factory=list)
     synthesis: SynthesisReport | None = None
     adapter: str | None = None
     pending_human_approval: str | None = None

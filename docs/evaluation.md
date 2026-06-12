@@ -125,3 +125,14 @@
 - Runtime stops before a dependent stage when prerequisite stage gates have not passed.
 - Generated migration specs explicitly model inventory artifacts, guarded plan-review dependencies, and stricter write-heavy boundaries.
 - Codex CLI dynamic planner output schema includes dependency, artifact, and stage write-policy fields.
+
+## v0.14 Behavior
+
+- Passing stages with `produces` write markdown artifact files under `.cdw/runs/<run-id>/artifacts/<stage-id>/`.
+- Run state stores artifact records with name, producing stage id, path, content type, and source work unit ids.
+- Runtime hydrates declared `consumes` artifacts into dependent stage worker prompts.
+- Runtime does not write artifacts for failed stages.
+- Resume keeps artifact writes idempotent and does not duplicate artifact records.
+- `cdw status` and `cdw status --json` expose artifact counts and summaries.
+- `cdw artifacts <run-id>` lists artifacts and `cdw artifact <run-id> <artifact-name>` prints one artifact.
+- Guarded migration inventory writes a real `migration inventory` artifact before the plan-review approval gate.

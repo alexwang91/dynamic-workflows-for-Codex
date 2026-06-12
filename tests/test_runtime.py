@@ -3,6 +3,9 @@ from cdw.planner import build_plan
 from cdw.resume import resume_run
 from cdw.runtime import execute_plan, execute_workflow_bundle
 from cdw.schemas import (
+    VerificationResult,
+    WorkerResult,
+    WorkerStatus,
     WorkflowPlan,
     WorkflowProcedure,
     WorkflowSpecBundle,
@@ -73,6 +76,51 @@ def test_runtime_stops_dependent_stage_when_dependency_gate_fails(tmp_path):
     assert state.synthesis is not None
     assert state.synthesis.status == "incomplete"
     assert "first" in state.synthesis.unresolved
+
+
+def test_runtime_writes_artifacts_for_passed_stage(tmp_path):
+    bundle = _dependent_stage_bundle(on_failure="continue")
+
+    state = execute_workflow_bundle(bundle, tmp_path, FakeCodexAdapter())
+
+    assert len(state.artifacts) == 1
+    assert state.artifacts[0].name == "first artifact"
+    artifact_path = tmp_path / ".cdw" / "runs" / state.run_id / state.artifacts[0].path
+    assert artifact_path.exists()
+    assert "first worker completed Run first stage" in artifact_path.read_text(
+        encoding="utf-8"
+    )
+
+
+def test_runtime_does_not_write_artifacts_for_failed_stage(tmp_path):
+    bundle = _dependent_stage_bundle(on_failure="continue")
+    adapter = FakeCodexAdapter(fail_work_unit_ids={"first"})
+
+    state = execute_workflow_bundle(bundle, tmp_path, adapter)
+
+    assert state.artifacts == []
+
+
+def test_runtime_hydrates_consumed_artifacts_into_dependent_worker_prompt(tmp_path):
+    bundle = _dependent_stage_bundle(on_failure="continue")
+    adapter = RecordingAdapter()
+
+    execute_workflow_bundle(bundle, tmp_path, adapter)
+
+    prompts = dict(adapter.prompts)
+    assert "Consumed artifacts" in prompts["second"]
+    assert "first artifact" in prompts["second"]
+    assert "summary for first" in prompts["second"]
+
+
+def test_resume_does_not_duplicate_existing_artifact_records(tmp_path):
+    bundle = _dependent_stage_bundle(on_failure="continue")
+    state = execute_workflow_bundle(bundle, tmp_path, FakeCodexAdapter())
+
+    resumed = resume_run(tmp_path, state.run_id, FakeCodexAdapter())
+
+    assert len(resumed.artifacts) == 1
+    assert resumed.artifacts[0].name == "first artifact"
 
 
 def test_runtime_persists_procedure_for_staged_run(tmp_path):
@@ -254,6 +302,28 @@ def _dependent_stage_bundle(on_failure: str) -> WorkflowSpecBundle:
     bundle.procedure.stages[1].depends_on = ["stage-one"]
     bundle.procedure.stages[1].consumes = ["first artifact"]
     return bundle
+
+
+class RecordingAdapter:
+    def __init__(self):
+        self.prompts = []
+
+    def run_worker(self, work_unit):
+        self.prompts.append((work_unit.id, work_unit.prompt))
+        return WorkerResult(
+            work_unit_id=work_unit.id,
+            status=WorkerStatus.SUCCEEDED,
+            summary=f"summary for {work_unit.id}",
+            evidence=[work_unit.prompt],
+            raw_output=work_unit.prompt,
+        )
+
+    def verify_worker_result(self, result):
+        return VerificationResult(
+            work_unit_id=result.work_unit_id,
+            status="passed",
+            notes="ok",
+        )
 
 
 def _double_manual_gate_bundle() -> WorkflowSpecBundle:
