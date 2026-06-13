@@ -3,9 +3,13 @@ from cdw.planner import build_plan
 from cdw.resume import resume_run
 from cdw.runtime import execute_plan, execute_workflow_bundle
 from cdw.schemas import (
+    VerificationResult,
+    WorkerResult,
+    WorkerStatus,
     WorkflowPlan,
     WorkflowProcedure,
     WorkflowSpecBundle,
+    WorkflowSpecConstraints,
     WorkflowStage,
     WorkUnit,
 )
@@ -73,6 +77,100 @@ def test_runtime_stops_dependent_stage_when_dependency_gate_fails(tmp_path):
     assert state.synthesis is not None
     assert state.synthesis.status == "incomplete"
     assert "first" in state.synthesis.unresolved
+
+
+def test_runtime_writes_artifacts_for_passed_stage(tmp_path):
+    bundle = _dependent_stage_bundle(on_failure="continue")
+
+    state = execute_workflow_bundle(bundle, tmp_path, FakeCodexAdapter())
+
+    assert len(state.artifacts) == 1
+    assert state.artifacts[0].name == "first artifact"
+    artifact_path = tmp_path / ".cdw" / "runs" / state.run_id / state.artifacts[0].path
+    assert artifact_path.exists()
+    assert "first worker completed Run first stage" in artifact_path.read_text(
+        encoding="utf-8"
+    )
+
+
+def test_runtime_does_not_write_artifacts_for_failed_stage(tmp_path):
+    bundle = _dependent_stage_bundle(on_failure="continue")
+    adapter = FakeCodexAdapter(fail_work_unit_ids={"first"})
+
+    state = execute_workflow_bundle(bundle, tmp_path, adapter)
+
+    assert state.artifacts == []
+
+
+def test_runtime_hydrates_consumed_artifacts_into_dependent_worker_prompt(tmp_path):
+    bundle = _dependent_stage_bundle(on_failure="continue")
+    adapter = RecordingAdapter()
+
+    execute_workflow_bundle(bundle, tmp_path, adapter)
+
+    prompts = dict(adapter.prompts)
+    assert "Consumed artifacts" in prompts["second"]
+    assert "first artifact" in prompts["second"]
+    assert "summary for first" in prompts["second"]
+
+
+def test_resume_does_not_duplicate_existing_artifact_records(tmp_path):
+    bundle = _dependent_stage_bundle(on_failure="continue")
+    state = execute_workflow_bundle(bundle, tmp_path, FakeCodexAdapter())
+
+    resumed = resume_run(tmp_path, state.run_id, FakeCodexAdapter())
+
+    assert len(resumed.artifacts) == 1
+    assert resumed.artifacts[0].name == "first artifact"
+
+
+def test_runtime_records_passing_boundary_for_guarded_stage_after_approval(tmp_path):
+    bundle = _boundary_bundle(allowed_paths=["src/**"])
+    state = execute_workflow_bundle(
+        bundle,
+        tmp_path,
+        BoundaryAdapter({"inventory": "Inventory complete"}),
+    )
+
+    resumed = resume_run(
+        tmp_path,
+        state.run_id,
+        BoundaryAdapter({"patch-plan": "WRITE_PATHS:\n- src/users.py"}),
+        approve_human_gates=True,
+    )
+
+    assert resumed.synthesis is not None
+    assert resumed.synthesis.status == "complete"
+    assert len(resumed.boundary_results) == 1
+    assert resumed.boundary_results[0].status == "passed"
+    assert resumed.boundary_results[0].checked_paths == ["src/users.py"]
+    assert any(artifact.name == "guarded patch plan" for artifact in resumed.artifacts)
+
+
+def test_runtime_boundary_failure_blocks_guarded_stage_artifact(tmp_path):
+    bundle = _boundary_bundle(allowed_paths=["src/**"], forbidden_paths=["secrets/**"])
+    state = execute_workflow_bundle(
+        bundle,
+        tmp_path,
+        BoundaryAdapter({"inventory": "Inventory complete"}),
+    )
+
+    resumed = resume_run(
+        tmp_path,
+        state.run_id,
+        BoundaryAdapter({"patch-plan": "WRITE_PATHS:\n- secrets/key.py"}),
+        approve_human_gates=True,
+    )
+
+    assert resumed.synthesis is not None
+    assert resumed.synthesis.status == "incomplete"
+    assert len(resumed.boundary_results) == 1
+    assert resumed.boundary_results[0].status == "failed"
+    assert resumed.boundary_results[0].violations[0].path == "secrets/key.py"
+    assert "boundary:migration-plan-review:secrets/key.py" in resumed.synthesis.unresolved
+    assert not any(
+        artifact.name == "guarded patch plan" for artifact in resumed.artifacts
+    )
 
 
 def test_runtime_persists_procedure_for_staged_run(tmp_path):
@@ -254,6 +352,112 @@ def _dependent_stage_bundle(on_failure: str) -> WorkflowSpecBundle:
     bundle.procedure.stages[1].depends_on = ["stage-one"]
     bundle.procedure.stages[1].consumes = ["first artifact"]
     return bundle
+
+
+class RecordingAdapter:
+    def __init__(self):
+        self.prompts = []
+
+    def run_worker(self, work_unit):
+        self.prompts.append((work_unit.id, work_unit.prompt))
+        return WorkerResult(
+            work_unit_id=work_unit.id,
+            status=WorkerStatus.SUCCEEDED,
+            summary=f"summary for {work_unit.id}",
+            evidence=[work_unit.prompt],
+            raw_output=work_unit.prompt,
+        )
+
+    def verify_worker_result(self, result):
+        return VerificationResult(
+            work_unit_id=result.work_unit_id,
+            status="passed",
+            notes="ok",
+        )
+
+
+class BoundaryAdapter:
+    def __init__(self, outputs):
+        self.outputs = outputs
+
+    def run_worker(self, work_unit):
+        output = self.outputs.get(work_unit.id, f"{work_unit.id} complete")
+        return WorkerResult(
+            work_unit_id=work_unit.id,
+            status=WorkerStatus.SUCCEEDED,
+            summary=output,
+            evidence=[output],
+            raw_output=output,
+        )
+
+    def verify_worker_result(self, result):
+        return VerificationResult(
+            work_unit_id=result.work_unit_id,
+            status="passed",
+            notes="ok",
+        )
+
+
+def _boundary_bundle(
+    allowed_paths: list[str],
+    forbidden_paths: list[str] | None = None,
+) -> WorkflowSpecBundle:
+    plan = WorkflowPlan(
+        command="migrate",
+        request="Rename User model to Account",
+        pattern="guarded-migration",
+        work_units=[
+            WorkUnit(
+                id="inventory",
+                role="inventory worker",
+                goal="Inventory migration scope",
+                prompt="Inventory migration scope",
+                expected_output="Inventory result",
+            ),
+            WorkUnit(
+                id="patch-plan",
+                role="patch planner",
+                goal="Plan guarded patch",
+                prompt="Plan guarded patch",
+                expected_output="Patch plan",
+            ),
+        ],
+        verification_strategy="stage-gates",
+        stop_condition="procedure_complete",
+    )
+    return WorkflowSpecBundle(
+        constraints=WorkflowSpecConstraints(
+            write_policy="write-heavy",
+            allowed_paths=allowed_paths,
+            forbidden_paths=forbidden_paths or [],
+            requires_human_approval=True,
+        ),
+        procedure=WorkflowProcedure(
+            mode="guarded",
+            triggers=["migrate"],
+            stages=[
+                WorkflowStage(
+                    id="migration-inventory",
+                    purpose="Inventory",
+                    work_unit_ids=["inventory"],
+                    produces=["migration inventory"],
+                ),
+                WorkflowStage(
+                    id="migration-plan-review",
+                    purpose="Guarded patch review",
+                    work_unit_ids=["patch-plan"],
+                    depends_on=["migration-inventory"],
+                    consumes=["migration inventory"],
+                    produces=["guarded patch plan"],
+                    gate="manual_review",
+                    on_failure="require_human",
+                    write_policy="guarded",
+                ),
+            ],
+            final_artifacts=["synthesis report"],
+        ),
+        plan=plan,
+    )
 
 
 def _double_manual_gate_bundle() -> WorkflowSpecBundle:

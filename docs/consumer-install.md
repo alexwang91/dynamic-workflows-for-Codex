@@ -84,8 +84,11 @@ From the cloned repo:
 python -m cdw plan "Review this branch" --planner codex-cli --save-spec .cdw/specs/review.workflow.json
 python -m cdw run .cdw/specs/review.workflow.json --adapter codex-cli
 python -m cdw status <run-id>
+python -m cdw artifacts <run-id>
+python -m cdw artifact <run-id> "synthesis report"
 python -m cdw runs
 python -m cdw migrate "Rename User model to Account" --adapter codex-cli
+python -m cdw migrate "Rename User model to Account" --allow-path "src/**" --forbid-path ".env*" --adapter codex-cli
 ```
 
 Use `--planner codex-cli` when the user's own Codex CLI should design a
@@ -97,6 +100,18 @@ Saved workflow specs can express stage dependencies, consumed and produced
 artifacts, and per-stage write-policy boundaries. The runtime will not run a
 dependent stage until its prerequisite stages pass their gates, and write-heavy
 workflow specs require human approval boundaries.
+
+When a stage passes and declares `produces`, the runtime writes markdown
+artifacts under `.cdw/runs/<run-id>/artifacts/`. A later stage that declares
+`consumes` receives those verified artifacts in its worker prompt. Use
+`cdw artifacts <run-id>` to list them and `cdw artifact <run-id> "<artifact name>"`
+to inspect one.
+
+For guarded/write-heavy work, add repeated `--allow-path <glob>` and
+`--forbid-path <glob>` flags when planning or running specs. Guarded stages can
+declare `WRITE_PATHS:` in their output; the runtime records boundary failures
+when a declared path is forbidden, outside the allowlist, absolute, or uses
+parent traversal.
 
 Use `cdw status <run-id>` before resuming a workflow. It reports the synthesis
 status, pending human approval stage, state path, and adapter-aware approval
@@ -138,4 +153,5 @@ python -m cdw review "Review this branch" --adapter live
 used for the live smoke worker. It does not require `OPENAI_API_KEY`, the
 OpenAI Agents SDK, or a working `codex` command.
 
-Do not commit secrets. `.cdw/` is ignored and stores local run state only.
+Do not commit secrets. `.cdw/` is ignored and stores local run state and
+workflow artifacts only.

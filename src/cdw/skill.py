@@ -16,7 +16,7 @@ def install_skill(root: Path) -> Path:
 def build_skill_content(skill_name: str = SKILL_NAME) -> str:
     return f"""---
 name: {skill_name}
-description: Use when a Codex task needs dynamic workflow orchestration for branch review, debugging, resumable workflow specs, run status inspection, guarded migrations, staged procedure execution with stage dependencies, artifact flow, write-policy boundaries, or clone-user readiness checks.
+description: Use when a Codex task needs dynamic workflow orchestration for branch review, debugging, resumable workflow specs, run status inspection, persisted artifacts, guarded migrations, staged procedure execution with stage dependencies, artifact flow, path boundary checks, write-policy boundaries, or clone-user readiness checks.
 ---
 
 # Dynamic Workflows For Codex
@@ -33,6 +33,10 @@ Use this skill when the user asks for any of these:
 - Reusable workflow specs, staged procedure graphs, or resumable runs.
 - Workflow specs that need explicit stage dependencies, artifact flow, or
   write-policy boundaries.
+- Workflow runs where produced artifacts should be listed, opened, or used as
+  context for downstream stages.
+- Guarded/write-heavy plans where declared write paths should be checked
+  against allowed and forbidden path boundaries.
 - Dynamic workflow planning from a broad request.
 - Run status inspection for interrupted, paused, or recently completed workflows.
 - Clone/install readiness checks for this plugin or runtime.
@@ -87,9 +91,11 @@ the same adapter policy below.
 - Use `--planner fake` for deterministic tests and demos.
 - Dynamic planner modes require `--save-spec`; planning writes a validated spec
   and does not execute workers.
-- v0.13 workflow specs can express stage dependencies, consumed and produced
-  artifact flow, and per-stage write-policy boundaries. Treat those fields as
-  part of the execution contract, not decorative notes.
+- v0.15 workflow specs can express stage dependencies, consumed and produced
+  artifact flow, and per-stage write-policy boundaries. Verified produced
+  artifacts are persisted under `.cdw/runs/<run-id>/artifacts/` and hydrated
+  into dependent stage prompts. Guarded/write-heavy stages can record boundary failures
+  when declared `WRITE_PATHS` violate `--allow-path` or `--forbid-path`.
 
 ## Approval Policy
 
@@ -120,9 +126,13 @@ worker results, verifier results, synthesis, and staged procedure state.
 
 - Run `cdw plan "<request>" --planner codex-cli --save-spec <file>` to create a dynamic reusable workflow spec.
 - Run `cdw plan "<request>" --save-spec <file>` to create a static reusable workflow spec.
+- Add `--allow-path <glob>` and `--forbid-path <glob>` to `plan`, `run`,
+  `review`, `debug`, or `migrate` when write boundaries should be persisted.
 - Run `cdw bootstrap --root <repo>` to refresh repo-local plugin packaging and print install next steps.
 - Run `cdw status <run-id>` to inspect a persisted workflow run before resuming.
 - Run `cdw status <run-id> --json` when a machine-readable status is needed.
+- Run `cdw artifacts <run-id>` to list persisted artifacts for a run.
+- Run `cdw artifact <run-id> "<artifact name>"` to read a persisted artifact.
 - Run `cdw runs` to list recent persisted workflow runs.
 - Run `cdw review "<request>" --adapter codex-cli` for a real review workflow through the user's logged-in Codex CLI.
 - Run `cdw debug "<request>" --adapter codex-cli` for hypothesis-driven debugging.
@@ -143,5 +153,6 @@ worker results, verifier results, synthesis, and staged procedure state.
   pending stage.
 - Do not use `live-smoke --execute` unless the user explicitly wants the
   optional Agents SDK live path.
-- Keep `.cdw/` local. It stores workflow specs and run state, not secrets.
+- Keep `.cdw/` local. It stores workflow specs, run state, and workflow
+  artifacts, not secrets.
 """

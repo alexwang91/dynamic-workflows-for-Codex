@@ -1,9 +1,9 @@
 # Dynamic Workflows For Codex
 
-[![Release](https://img.shields.io/badge/release-v0.13-blue)](CHANGELOG.md)
+[![Release](https://img.shields.io/badge/release-v0.15-blue)](CHANGELOG.md)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](pyproject.toml)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-106%20passed-brightgreen)](tests)
+[![Tests](https://img.shields.io/badge/tests-133%20passed-brightgreen)](tests)
 
 External dynamic workflow runtime for Codex.
 
@@ -37,6 +37,8 @@ Create and run a reusable workflow spec:
 python -m cdw plan "Review this branch" --planner fake --save-spec .cdw/specs/review.workflow.json
 python -m cdw run .cdw/specs/review.workflow.json --adapter fake
 python -m cdw status <run-id>
+python -m cdw artifacts <run-id>
+python -m cdw artifact <run-id> "synthesis report"
 python -m cdw runs
 python -m cdw resume <run-id> --adapter fake
 ```
@@ -45,6 +47,7 @@ Create a guarded migration plan:
 
 ```bash
 python -m cdw migrate "Rename User model to Account" --adapter fake
+python -m cdw migrate "Rename User model to Account" --allow-path "src/**" --forbid-path ".env*" --adapter fake
 ```
 
 ## Install Into Codex
@@ -77,8 +80,11 @@ For the full consumer setup, read [docs/consumer-install.md](docs/consumer-insta
 - `cdw review`: fan out specialist review workers.
 - `cdw debug`: fan out hypothesis investigators.
 - `cdw migrate`: create guarded write-heavy migration plans.
+- `--allow-path` / `--forbid-path`: persist path boundaries for guarded/write-heavy work.
 - `cdw run`: execute saved workflow specs.
 - `cdw status`: inspect a persisted run and see pending human approvals.
+- `cdw artifacts`: list persisted artifacts for a run.
+- `cdw artifact`: print one persisted artifact.
 - `cdw runs`: list recent persisted runs.
 - `cdw resume`: continue an incomplete or human-approved persisted run.
 - `cdw bootstrap`: refresh repo-local plugin files and print install next steps.
@@ -110,6 +116,17 @@ stages pass verification gates. Write-heavy specs require human approval, and
 guarded/write-heavy stages must be behind manual review or require-human
 failure behavior.
 
+When a stage with `produces` passes its gate, `cdw` writes markdown artifacts
+under `.cdw/runs/<run-id>/artifacts/<stage-id>/` and records them in run state.
+When a later stage declares `consumes`, those verified artifacts are loaded and
+injected into that stage's worker prompts.
+
+Guarded/write-heavy stages can also declare planned write paths in `WRITE_PATHS:`
+sections. When workflow constraints include `allowed_paths` or
+`forbidden_paths`, the runtime records a boundary result before writing stage
+artifacts. Forbidden paths, paths outside the allowlist, absolute paths, and
+parent traversal paths make the workflow incomplete.
+
 Stages with `manual_review` gates or `require_human` failure behavior pause
 before worker execution. The run state records `pending_human_approval`, CLI
 reports `waiting for human approval`, and the workflow continues only after:
@@ -123,8 +140,12 @@ stages pause again.
 
 Use `cdw status <run-id>` before resuming. It reports the synthesis status,
 pending human approval stage, state path, and the adapter-aware approval resume
-command when one is needed. Use `cdw runs` to find recent run ids. Both
-commands support `--json` for skill/plugin automation.
+command when one is needed. It also reports artifact count and artifact paths
+when the run produced artifacts. Use `cdw artifacts <run-id>` to list artifacts
+and `cdw artifact <run-id> "<artifact name>"` to print one artifact. Use
+`cdw runs` to find recent run ids. Status also reports boundary failures when
+guarded/write-heavy write plans violate path constraints. Status, runs, and
+artifact listing support `--json` for skill/plugin automation.
 
 `cdw plan` now supports planner modes. `static` is the default and preserves the
 old fixed planning template. `fake` writes a deterministic multi-stage dynamic
@@ -197,7 +218,7 @@ python -m cdw review "Review this branch" --adapter live --codex-command /path/t
 
 ## Project Status
 
-Current release: `v0.13`.
+Current release: `v0.15`.
 
 - v0.1: MVP runtime with plan/review/debug, fake adapter, live MCP boundary.
 - v0.2: workflow specs, resume, guarded migration, skill installer.
@@ -223,6 +244,10 @@ Current release: `v0.13`.
   resume-aware skills.
 - v0.13: stronger workflow spec expression with stage dependencies, artifact
   flow, per-stage write policy, and stricter write-heavy migration boundaries.
+- v0.14: persisted stage artifacts, automatic consumed-artifact prompt
+  hydration for dependent stages, and artifact inspection CLI commands.
+- v0.15: executable path boundary checks for guarded/write-heavy stages,
+  including `--allow-path`, `--forbid-path`, boundary results, and status output.
 
 See [CHANGELOG.md](CHANGELOG.md) for details.
 

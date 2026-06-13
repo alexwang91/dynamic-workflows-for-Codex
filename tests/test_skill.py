@@ -31,5 +31,11 @@ def test_skill_content_routes_dynamic_workflow_tasks():
     assert "--adapter codex-cli" in content
     assert "stage dependencies" in content
     assert "artifact flow" in content
+    assert "--allow-path <glob>" in content
+    assert "--forbid-path <glob>" in content
+    assert "boundary failures" in content
+    assert "cdw artifacts <run-id>" in content
+    assert "cdw artifact <run-id>" in content
+    assert "hydrated" in content
     assert "write-policy boundaries" in content
     assert "Do not ask for or assume the project author's API key" in content

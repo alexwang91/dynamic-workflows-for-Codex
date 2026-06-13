@@ -43,8 +43,8 @@ def package_repo_marketplace(root: Path) -> Path:
 def _plugin_manifest() -> dict:
     return {
         "name": PLUGIN_NAME,
-        "version": "0.13.0",
-        "description": "Dynamic workflow runtime with Codex CLI planning, run status inspection, human approval gates, stage dependencies, artifact flow, bootstrap, doctor checks, and skill routing.",
+        "version": "0.15.0",
+        "description": "Dynamic workflow runtime with Codex CLI planning, run status inspection, human approval gates, stage dependencies, persisted artifacts, path boundary checks, artifact flow, bootstrap, doctor checks, and skill routing.",
         "author": {
             "name": "Local developer",
         },
@@ -62,22 +62,19 @@ def _plugin_manifest() -> dict:
                 "review, debugging, workflow specs, staged runs, resume, and "
                 "guarded migrations to the cdw external runtime. Workflow specs "
                 "can express stage dependencies, consumed and produced artifacts, "
-                "and stricter write-policy boundaries for write-heavy work."
+                "and stricter write-policy boundaries for write-heavy work. "
+                "Verified stage artifacts are persisted under .cdw runs and "
+                "hydrated into dependent stage prompts. Guarded/write-heavy "
+                "stages can check declared write paths against allowed and "
+                "forbidden path boundaries."
             ),
             "developerName": "Local developer",
             "category": "Productivity",
             "capabilities": ["Workflow", "Review"],
             "defaultPrompt": [
                 "Bootstrap this clone for Codex dynamic workflows.",
-                "Run cdw doctor for this clone.",
                 "Create a dynamic workflow spec with Codex CLI.",
-                "Inspect workflow spec stage dependencies and artifacts.",
-                "Inspect recent workflow run status.",
-                "Resume a workflow after human approval.",
-                "Review this branch with dynamic workflows.",
-                "Debug this flaky test with cdw.",
-                "Create and run a reusable workflow spec.",
-                "Create a guarded migration workflow.",
+                "Run guarded migrations with allowed and forbidden path boundaries.",
             ],
         },
     }

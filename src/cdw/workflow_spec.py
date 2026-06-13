@@ -56,6 +56,7 @@ def _constraints_for_plan(plan: WorkflowPlan) -> WorkflowSpecConstraints:
     if plan.command == "migrate":
         return WorkflowSpecConstraints(
             write_policy="write-heavy",
+            forbidden_paths=[".git/**", ".cdw/**", ".agents/**", ".env*"],
             requires_human_approval=True,
         )
     return WorkflowSpecConstraints(write_policy="read-only")

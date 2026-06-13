@@ -38,6 +38,8 @@ def test_workflow_spec_saves_v3_envelope(tmp_path):
     assert bundle.plan == plan
     assert bundle.constraints.write_policy == "write-heavy"
     assert bundle.constraints.requires_human_approval is True
+    assert ".cdw/**" in bundle.constraints.forbidden_paths
+    assert ".env*" in bundle.constraints.forbidden_paths
     assert bundle.procedure is not None
     assert bundle.procedure.mode == "guarded"
     assert [stage.id for stage in bundle.procedure.stages] == [

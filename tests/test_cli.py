@@ -24,7 +24,15 @@ def test_build_parser_has_core_commands():
 
     subcommands = parser._subparsers._group_actions[0].choices
 
-    assert {"plan", "review", "debug", "bootstrap", "doctor"}.issubset(subcommands)
+    assert {
+        "plan",
+        "review",
+        "debug",
+        "bootstrap",
+        "doctor",
+        "artifacts",
+        "artifact",
+    }.issubset(subcommands)
 
 
 def test_approval_flag_is_resume_only():
@@ -35,6 +43,58 @@ def test_approval_flag_is_resume_only():
     assert args.approve_human_gates is True
     with pytest.raises(SystemExit):
         parser.parse_args(["run", "workflow.json", "--approve-human-gates"])
+
+
+def test_path_boundary_flags_parse_for_plan_migrate_and_run():
+    parser = build_parser()
+
+    plan_args = parser.parse_args(
+        [
+            "plan",
+            "Review branch",
+            "--allow-path",
+            "src/**",
+            "--forbid-path",
+            ".env*",
+        ]
+    )
+    migrate_args = parser.parse_args(
+        [
+            "migrate",
+            "Rename model",
+            "--allow-path",
+            "app/**",
+            "--allow-path",
+            "tests/**",
+        ]
+    )
+    run_args = parser.parse_args(
+        [
+            "run",
+            "workflow.json",
+            "--allow-path",
+            "src/**",
+            "--forbid-path",
+            "secrets/**",
+        ]
+    )
+    resume_args = parser.parse_args(
+        [
+            "resume",
+            "abc123",
+            "--allow-path",
+            "src/**",
+            "--forbid-path",
+            "secrets/**",
+        ]
+    )
+
+    assert plan_args.allow_path == ["src/**"]
+    assert plan_args.forbid_path == [".env*"]
+    assert migrate_args.allow_path == ["app/**", "tests/**"]
+    assert run_args.forbid_path == ["secrets/**"]
+    assert resume_args.allow_path == ["src/**"]
+    assert resume_args.forbid_path == ["secrets/**"]
 
 
 def test_plan_command_persists_state(tmp_path, capsys):
@@ -124,6 +184,29 @@ def test_plan_can_save_workflow_spec(tmp_path):
 
     assert exit_code == 0
     assert spec_path.exists()
+
+
+def test_plan_save_spec_applies_path_boundary_overrides(tmp_path):
+    spec_path = tmp_path / "review.workflow.json"
+
+    exit_code = main(
+        [
+            "plan",
+            "Review branch",
+            "--save-spec",
+            str(spec_path),
+            "--allow-path",
+            "src/**",
+            "--forbid-path",
+            ".env*",
+        ]
+    )
+
+    data = json.loads(spec_path.read_text(encoding="utf-8"))
+
+    assert exit_code == 0
+    assert data["constraints"]["allowed_paths"] == ["src/**"]
+    assert data["constraints"]["forbidden_paths"] == [".env*"]
 
 
 def test_plan_can_save_fake_dynamic_workflow_spec(tmp_path):
@@ -331,6 +414,21 @@ def test_status_reports_waiting_human_run(tmp_path, capsys):
     assert "state " in captured.out
 
 
+def test_status_reports_artifacts_for_completed_run(tmp_path, capsys):
+    spec_path = tmp_path / "artifact.workflow.json"
+    save_workflow_spec_bundle(spec_path, _artifact_bundle())
+    main(["run", str(spec_path), "--root", str(tmp_path)])
+    run_id = capsys.readouterr().out.strip().split()[-1]
+
+    exit_code = main(["status", run_id, "--root", str(tmp_path)])
+
+    captured = capsys.readouterr()
+
+    assert exit_code == 0
+    assert "artifacts 1" in captured.out
+    assert "artifact first artifact stage stage-one" in captured.out
+
+
 def test_status_json_reports_waiting_human_run(tmp_path, capsys):
     spec_path = tmp_path / "manual.workflow.json"
     save_workflow_spec_bundle(spec_path, _manual_gate_bundle())
@@ -352,6 +450,112 @@ def test_status_json_reports_waiting_human_run(tmp_path, capsys):
     assert data["resume_command"] == (
         f"python -m cdw resume {run_id} --adapter fake --approve-human-gates"
     )
+
+
+def test_status_json_reports_artifacts_for_completed_run(tmp_path, capsys):
+    spec_path = tmp_path / "artifact.workflow.json"
+    save_workflow_spec_bundle(spec_path, _artifact_bundle())
+    main(["run", str(spec_path), "--root", str(tmp_path)])
+    run_id = capsys.readouterr().out.strip().split()[-1]
+
+    exit_code = main(["status", run_id, "--root", str(tmp_path), "--json"])
+
+    captured = capsys.readouterr()
+    data = json.loads(captured.out)
+
+    assert exit_code == 0
+    assert data["artifact_count"] == 1
+    assert data["artifacts"][0]["name"] == "first artifact"
+    assert data["artifacts"][0]["stage_id"] == "stage-one"
+
+
+def test_status_json_reports_boundary_failures(tmp_path, capsys, monkeypatch):
+    spec_path = tmp_path / "boundary.workflow.json"
+    save_workflow_spec_bundle(spec_path, _boundary_bundle())
+    monkeypatch.setattr(
+        "cdw.cli._build_adapter",
+        lambda config, codex_command=None: BoundaryCliAdapter(),
+    )
+    main(
+        [
+            "run",
+            str(spec_path),
+            "--root",
+            str(tmp_path),
+        ]
+    )
+    run_id = capsys.readouterr().out.strip().split()[-1]
+
+    main(
+        [
+            "resume",
+            run_id,
+            "--root",
+            str(tmp_path),
+            "--approve-human-gates",
+            "--allow-path",
+            "src/**",
+            "--forbid-path",
+            "secrets/**",
+        ]
+    )
+    capsys.readouterr()
+
+    exit_code = main(["status", run_id, "--root", str(tmp_path), "--json"])
+
+    captured = capsys.readouterr()
+    data = json.loads(captured.out)
+
+    assert exit_code == 0
+    assert data["boundary_failure_count"] == 1
+    assert data["boundary_failures"][0]["stage_id"] == "migration-plan-review"
+    assert data["boundary_failures"][0]["violations"][0]["path"] == "secrets/key.py"
+
+
+def test_artifacts_command_lists_run_artifacts(tmp_path, capsys):
+    spec_path = tmp_path / "artifact.workflow.json"
+    save_workflow_spec_bundle(spec_path, _artifact_bundle())
+    main(["run", str(spec_path), "--root", str(tmp_path)])
+    run_id = capsys.readouterr().out.strip().split()[-1]
+
+    exit_code = main(["artifacts", run_id, "--root", str(tmp_path)])
+
+    captured = capsys.readouterr()
+
+    assert exit_code == 0
+    assert "artifact first artifact stage stage-one" in captured.out
+
+
+def test_artifact_command_prints_artifact_content(tmp_path, capsys):
+    spec_path = tmp_path / "artifact.workflow.json"
+    save_workflow_spec_bundle(spec_path, _artifact_bundle())
+    main(["run", str(spec_path), "--root", str(tmp_path)])
+    run_id = capsys.readouterr().out.strip().split()[-1]
+
+    exit_code = main(
+        ["artifact", run_id, "first artifact", "--root", str(tmp_path)]
+    )
+
+    captured = capsys.readouterr()
+
+    assert exit_code == 0
+    assert "# first artifact" in captured.out
+    assert "first worker completed Run first stage" in captured.out
+
+
+def test_artifact_command_reports_missing_artifact_without_traceback(tmp_path, capsys):
+    spec_path = tmp_path / "artifact.workflow.json"
+    save_workflow_spec_bundle(spec_path, _artifact_bundle())
+    main(["run", str(spec_path), "--root", str(tmp_path)])
+    run_id = capsys.readouterr().out.strip().split()[-1]
+
+    exit_code = main(["artifact", run_id, "missing", "--root", str(tmp_path)])
+
+    captured = capsys.readouterr()
+
+    assert exit_code == 1
+    assert "error: artifact not found: missing" in captured.err
+    assert "Traceback" not in captured.err
 
 
 def test_status_reports_missing_run_without_traceback(tmp_path, capsys):
@@ -430,6 +634,15 @@ def test_migrate_waits_for_human_approval_before_guarded_stage(tmp_path, capsys)
     assert [result["work_unit_id"] for result in data["worker_results"]] == [
         "inventory"
     ]
+    assert data["artifacts"][0]["name"] == "migration inventory"
+    artifact_path = (
+        tmp_path
+        / ".cdw"
+        / "runs"
+        / run_id
+        / data["artifacts"][0]["path"]
+    )
+    assert artifact_path.exists()
 
 
 def test_install_skill_command_writes_repo_skill(tmp_path, capsys):
@@ -490,6 +703,130 @@ def _manual_gate_bundle() -> WorkflowSpecBundle:
                     work_unit_ids=["second"],
                     gate="manual_review",
                     on_failure="require_human",
+                ),
+            ],
+            final_artifacts=["synthesis report"],
+        ),
+        plan=plan,
+    )
+
+
+def _artifact_bundle() -> WorkflowSpecBundle:
+    plan = WorkflowPlan(
+        command="review",
+        request="Artifact workflow",
+        pattern="artifact-flow",
+        work_units=[
+            WorkUnit(
+                id="first",
+                role="first worker",
+                goal="Run first stage",
+                prompt="Run first stage",
+                expected_output="First result",
+            ),
+            WorkUnit(
+                id="second",
+                role="second worker",
+                goal="Run second stage",
+                prompt="Run second stage",
+                expected_output="Second result",
+            ),
+        ],
+        verification_strategy="artifact-flow",
+        stop_condition="procedure_complete",
+    )
+    return WorkflowSpecBundle(
+        procedure=WorkflowProcedure(
+            mode="sequence",
+            triggers=["artifact"],
+            stages=[
+                WorkflowStage(
+                    id="stage-one",
+                    purpose="Run first stage",
+                    work_unit_ids=["first"],
+                    produces=["first artifact"],
+                ),
+                WorkflowStage(
+                    id="stage-two",
+                    purpose="Run second stage",
+                    work_unit_ids=["second"],
+                    depends_on=["stage-one"],
+                    consumes=["first artifact"],
+                ),
+            ],
+            final_artifacts=["synthesis report"],
+        ),
+        plan=plan,
+    )
+
+
+class BoundaryCliAdapter:
+    def run_worker(self, work_unit):
+        output = {
+            "inventory": "Inventory complete",
+            "patch-plan": "WRITE_PATHS:\n- secrets/key.py",
+        }.get(work_unit.id, f"{work_unit.id} complete")
+        return WorkerResult(
+            work_unit_id=work_unit.id,
+            status=WorkerStatus.SUCCEEDED,
+            summary=output,
+            evidence=[output],
+            raw_output=output,
+        )
+
+    def verify_worker_result(self, result):
+        return VerificationResult(
+            work_unit_id=result.work_unit_id,
+            status=VerificationStatus.PASSED,
+            notes="ok",
+        )
+
+
+def _boundary_bundle() -> WorkflowSpecBundle:
+    plan = WorkflowPlan(
+        command="migrate",
+        request="Boundary workflow",
+        pattern="artifact-flow",
+        work_units=[
+            WorkUnit(
+                id="inventory",
+                role="inventory worker",
+                goal="Run inventory",
+                prompt="Run inventory",
+                expected_output="Inventory",
+            ),
+            WorkUnit(
+                id="patch-plan",
+                role="patch planner",
+                goal="Plan patch",
+                prompt="Plan patch",
+                expected_output="Patch plan",
+            ),
+        ],
+        verification_strategy="artifact-flow",
+        stop_condition="procedure_complete",
+    )
+    return WorkflowSpecBundle(
+        procedure=WorkflowProcedure(
+            mode="guarded",
+            triggers=["migrate"],
+            stages=[
+                WorkflowStage(
+                    id="migration-inventory",
+                    purpose="Run inventory",
+                    work_unit_ids=["inventory"],
+                    produces=["migration inventory"],
+                ),
+                WorkflowStage(
+                    id="migration-plan-review",
+                    purpose="Review patch plan",
+                    work_unit_ids=["patch-plan"],
+                    depends_on=["migration-inventory"],
+                    consumes=["migration inventory"],
+                    produces=["guarded patch plan"],
+                    gate="manual_review",
+                    on_failure="require_human",
+                    write_policy="guarded",
                 ),
             ],
             final_artifacts=["synthesis report"],

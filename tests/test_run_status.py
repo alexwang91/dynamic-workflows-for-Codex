@@ -4,7 +4,14 @@ import pytest
 
 from cdw.planner import build_plan
 from cdw.run_status import list_run_summaries, summarize_run
-from cdw.schemas import SynthesisReport, VerificationResult, WorkerResult
+from cdw.schemas import (
+    ArtifactRecord,
+    BoundaryResult,
+    BoundaryViolation,
+    SynthesisReport,
+    VerificationResult,
+    WorkerResult,
+)
 from cdw.state import create_run_state, run_dir, save_run_state
 
 
@@ -28,6 +35,28 @@ def test_summarize_run_reports_pending_human_approval(tmp_path):
             notes="Inventory verified",
         )
     )
+    state.artifacts.append(
+        ArtifactRecord(
+            name="migration inventory",
+            stage_id="migration-inventory",
+            path="artifacts/migration-inventory/migration-inventory.md",
+            source_work_unit_ids=["inventory"],
+        )
+    )
+    state.boundary_results.append(
+        BoundaryResult(
+            stage_id="migration-plan-review",
+            status="failed",
+            checked_paths=["secrets/key.py"],
+            violations=[
+                BoundaryViolation(
+                    path="secrets/key.py",
+                    reason="forbidden",
+                    pattern="secrets/**",
+                )
+            ],
+        )
+    )
     state.synthesis = SynthesisReport(
         status="waiting_for_human",
         summary="Waiting for approval",
@@ -45,6 +74,10 @@ def test_summarize_run_reports_pending_human_approval(tmp_path):
     assert summary.pending_human_approval == "migration-plan-review"
     assert summary.worker_count == 1
     assert summary.verification_count == 1
+    assert summary.artifact_count == 1
+    assert summary.artifacts[0]["name"] == "migration inventory"
+    assert summary.boundary_failure_count == 1
+    assert summary.boundary_failures[0]["stage_id"] == "migration-plan-review"
     assert summary.state_path == str(state_path)
     assert summary.resume_command == (
         f"python -m cdw resume {state.run_id} --adapter codex-cli --approve-human-gates"

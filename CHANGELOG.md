@@ -2,6 +2,26 @@
 
 All notable changes to `dynamic-workflows-for-Codex` are documented here.
 
+## v0.15 - 2026-06-13
+
+- Added boundary extraction for explicit `WRITE_PATHS`, `Planned paths`, and `Paths` sections.
+- Added path boundary checks for guarded/write-heavy stages using workflow `allowed_paths` and `forbidden_paths`.
+- Added `BoundaryResult` records to run state and status summaries.
+- Boundary failures now stop the stage before artifact writing and make synthesis incomplete.
+- Added repeated `--allow-path` and `--forbid-path` CLI flags for planning, direct commands, and spec runs.
+- Generated migration specs now forbid `.git/**`, `.cdw/**`, `.agents/**`, and `.env*` by default.
+- Bumped package and plugin metadata to `0.15.0`.
+
+## v0.14 - 2026-06-12
+
+- Added persisted artifact records to run state.
+- Added markdown artifact files under `.cdw/runs/<run-id>/artifacts/<stage-id>/` for stages that pass their gate and declare `produces`.
+- Added consumed-artifact prompt hydration so dependent stages receive verified upstream artifacts as context.
+- Added `cdw artifacts <run-id>` and `cdw artifact <run-id> <artifact-name>` for artifact inspection.
+- Extended `cdw status` and `cdw status --json` with artifact counts and artifact summaries.
+- Made guarded migration inventory produce a real artifact before migration-plan review approval.
+- Bumped package and plugin metadata to `0.14.0`.
+
 ## v0.13 - 2026-06-12
 
 - Added stage-level `depends_on`, `consumes`, `produces`, and `write_policy` fields to v3 workflow specs.
