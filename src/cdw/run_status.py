@@ -22,6 +22,8 @@ class RunSummary:
     verification_count: int
     artifact_count: int
     artifacts: list[dict[str, object]]
+    boundary_failure_count: int
+    boundary_failures: list[dict[str, object]]
     state_path: str
     resume_command: str | None
 
@@ -47,6 +49,11 @@ def summarize_state(root: Path, state: RunState) -> RunSummary:
             f"{adapter_part} --approve-human-gates"
         )
     artifacts = artifact_summary_dicts(root, state)
+    boundary_failures = [
+        result.model_dump()
+        for result in state.boundary_results
+        if result.status == "failed"
+    ]
     return RunSummary(
         run_id=state.run_id,
         status=status,
@@ -58,6 +65,8 @@ def summarize_state(root: Path, state: RunState) -> RunSummary:
         verification_count=len(state.verification_results),
         artifact_count=len(artifacts),
         artifacts=artifacts,
+        boundary_failure_count=len(boundary_failures),
+        boundary_failures=boundary_failures,
         state_path=str(run_dir(root, state.run_id) / "state.json"),
         resume_command=resume_command,
     )

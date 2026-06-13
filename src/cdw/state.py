@@ -7,17 +7,20 @@ import uuid
 from pathlib import Path
 
 from cdw.schemas import RunState, WorkflowPlan, WorkflowProcedure
+from cdw.schemas import WorkflowSpecConstraints
 
 
 def create_run_state(
     plan: WorkflowPlan,
     procedure: WorkflowProcedure | None = None,
+    constraints: WorkflowSpecConstraints | None = None,
     adapter: str | None = None,
 ) -> RunState:
     return RunState(
         run_id=uuid.uuid4().hex[:12],
         plan=plan,
         procedure=procedure,
+        constraints=constraints or WorkflowSpecConstraints(),
         adapter=adapter,
     )
 

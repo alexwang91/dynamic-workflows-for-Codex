@@ -88,6 +88,7 @@ python -m cdw artifacts <run-id>
 python -m cdw artifact <run-id> "synthesis report"
 python -m cdw runs
 python -m cdw migrate "Rename User model to Account" --adapter codex-cli
+python -m cdw migrate "Rename User model to Account" --allow-path "src/**" --forbid-path ".env*" --adapter codex-cli
 ```
 
 Use `--planner codex-cli` when the user's own Codex CLI should design a
@@ -105,6 +106,12 @@ artifacts under `.cdw/runs/<run-id>/artifacts/`. A later stage that declares
 `consumes` receives those verified artifacts in its worker prompt. Use
 `cdw artifacts <run-id>` to list them and `cdw artifact <run-id> "<artifact name>"`
 to inspect one.
+
+For guarded/write-heavy work, add repeated `--allow-path <glob>` and
+`--forbid-path <glob>` flags when planning or running specs. Guarded stages can
+declare `WRITE_PATHS:` in their output; the runtime records boundary failures
+when a declared path is forbidden, outside the allowlist, absolute, or uses
+parent traversal.
 
 Use `cdw status <run-id>` before resuming a workflow. It reports the synthesis
 status, pending human approval stage, state path, and adapter-aware approval

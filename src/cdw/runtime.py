@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from cdw.artifacts import consumed_artifact_context, write_stage_artifacts
+from cdw.boundaries import check_stage_boundaries
 from cdw.codex_mcp import CodexAdapter
 from cdw.schemas import (
     RunState,
@@ -44,6 +45,7 @@ def execute_workflow_bundle(
     state = create_run_state(
         bundle.plan,
         procedure=bundle.procedure,
+        constraints=bundle.constraints,
         adapter=adapter_name,
     )
     save_run_state(root, state)
@@ -107,6 +109,9 @@ def ensure_procedure_results(
                 break
         ensure_stage_worker_results(root, state, adapter, stage)
         ensure_stage_verification_results(root, state, adapter, stage)
+        ensure_stage_boundary_result(root, state, stage)
+        if _stage_boundary_failed(state, stage):
+            break
         if _stage_gate_passed(state, stage):
             write_stage_artifacts(root, state, stage)
             save_run_state(root, state)
@@ -190,6 +195,25 @@ def ensure_stage_verification_results(
     return state
 
 
+def ensure_stage_boundary_result(
+    root: Path,
+    state: RunState,
+    stage: WorkflowStage,
+) -> RunState:
+    if not _stage_requires_boundary_check(stage):
+        return state
+    if any(result.stage_id == stage.id for result in state.boundary_results):
+        return state
+    boundary_result = check_stage_boundaries(
+        state.constraints,
+        stage,
+        _stage_worker_results(state, stage),
+    )
+    state.boundary_results.append(boundary_result)
+    save_run_state(root, state)
+    return state
+
+
 def finalize_synthesis(root: Path, state: RunState) -> RunState:
     state.synthesis = _synthesize(state)
     save_run_state(root, state)
@@ -233,6 +257,17 @@ def _stage_dependencies_passed(
     )
 
 
+def _stage_boundary_failed(state: RunState, stage: WorkflowStage) -> bool:
+    return any(
+        result.stage_id == stage.id and result.status == "failed"
+        for result in state.boundary_results
+    )
+
+
+def _stage_requires_boundary_check(stage: WorkflowStage) -> bool:
+    return stage.write_policy in {"guarded", "write-heavy"}
+
+
 def _stage_requires_human_approval(stage: WorkflowStage) -> bool:
     return stage.gate == "manual_review" or stage.on_failure == "require_human"
 
@@ -246,6 +281,16 @@ def _stage_verification_results(
         result
         for result in state.verification_results
         if result.work_unit_id in stage_ids
+    ]
+
+
+def _stage_worker_results(
+    state: RunState,
+    stage: WorkflowStage,
+) -> list:
+    stage_ids = set(stage.work_unit_ids)
+    return [
+        result for result in state.worker_results if result.work_unit_id in stage_ids
     ]
 
 
@@ -268,6 +313,12 @@ def _synthesize(state: RunState) -> SynthesisReport:
         for verification in state.verification_results
         if verification.status == VerificationStatus.FAILED
         and verification.work_unit_id not in unresolved
+    )
+    unresolved.extend(
+        f"boundary:{boundary.stage_id}:{violation.path}"
+        for boundary in state.boundary_results
+        if boundary.status == "failed"
+        for violation in boundary.violations
     )
 
     if unresolved:

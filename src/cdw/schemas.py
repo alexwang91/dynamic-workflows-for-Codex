@@ -236,6 +236,23 @@ class ArtifactRecord(BaseModel):
     source_work_unit_ids: list[str] = Field(default_factory=list)
 
 
+class BoundaryViolation(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    path: str = Field(min_length=1)
+    reason: Literal["forbidden", "outside_allowed_paths", "invalid_path"]
+    pattern: str | None = None
+
+
+class BoundaryResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    stage_id: str = Field(min_length=1)
+    status: Literal["passed", "failed"]
+    checked_paths: list[str] = Field(default_factory=list)
+    violations: list[BoundaryViolation] = Field(default_factory=list)
+
+
 class RunState(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -243,9 +260,11 @@ class RunState(BaseModel):
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     plan: WorkflowPlan
     procedure: WorkflowProcedure | None = None
+    constraints: WorkflowSpecConstraints = Field(default_factory=WorkflowSpecConstraints)
     worker_results: list[WorkerResult] = Field(default_factory=list)
     verification_results: list[VerificationResult] = Field(default_factory=list)
     artifacts: list[ArtifactRecord] = Field(default_factory=list)
+    boundary_results: list[BoundaryResult] = Field(default_factory=list)
     synthesis: SynthesisReport | None = None
     adapter: str | None = None
     pending_human_approval: str | None = None
