@@ -1,9 +1,9 @@
 # Dynamic Workflows For Codex
 
-[![Release](https://img.shields.io/badge/release-v0.16-blue)](CHANGELOG.md)
+[![Release](https://img.shields.io/badge/release-v0.17-blue)](CHANGELOG.md)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](pyproject.toml)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-138%20passed-brightgreen)](tests)
+[![Tests](https://img.shields.io/badge/tests-144%20passed-brightgreen)](tests)
 
 External dynamic workflow runtime for Codex.
 
@@ -142,6 +142,11 @@ WRITE_CONTRACT:
 }
 ```
 
+When the structured contract passes boundary checks, the runtime writes a
+`write phase draft` artifact into the same run artifact registry. The draft
+lists planned paths, actions, reasons, and checks for review before any
+write-heavy execution. It does not apply patches or modify source files.
+
 Stages with `manual_review` gates or `require_human` failure behavior pause
 before worker execution. The run state records `pending_human_approval`, CLI
 reports `waiting for human approval`, and the workflow continues only after:
@@ -233,7 +238,7 @@ python -m cdw review "Review this branch" --adapter live --codex-command /path/t
 
 ## Project Status
 
-Current release: `v0.16`.
+Current release: `v0.17`.
 
 - v0.1: MVP runtime with plan/review/debug, fake adapter, live MCP boundary.
 - v0.2: workflow specs, resume, guarded migration, skill installer.
@@ -266,6 +271,9 @@ Current release: `v0.16`.
 - v0.16: structured `WRITE_CONTRACT` JSON for strict guarded migrations,
   parsed write path intents, contract status in boundary results, and a
   `write path contract` artifact.
+- v0.17: reviewable `write phase draft` artifacts generated from passed
+  structured write contracts, idempotent across resume and exposed through
+  existing artifact commands.
 
 See [CHANGELOG.md](CHANGELOG.md) for details.
 

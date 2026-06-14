@@ -16,7 +16,7 @@ def install_skill(root: Path) -> Path:
 def build_skill_content(skill_name: str = SKILL_NAME) -> str:
     return f"""---
 name: {skill_name}
-description: Use when a Codex task needs dynamic workflow orchestration for branch review, debugging, resumable workflow specs, run status inspection, persisted artifacts, guarded migrations, staged procedure execution with stage dependencies, artifact flow, path boundary checks, structured WRITE_CONTRACT output, write-policy boundaries, or clone-user readiness checks.
+description: Use when a Codex task needs dynamic workflow orchestration for branch review, debugging, resumable workflow specs, run status inspection, persisted artifacts, guarded migrations, staged procedure execution with stage dependencies, artifact flow, path boundary checks, structured WRITE_CONTRACT output, write phase draft artifacts, write-policy boundaries, or clone-user readiness checks.
 ---
 
 # Dynamic Workflows For Codex
@@ -38,7 +38,8 @@ Use this skill when the user asks for any of these:
 - Guarded/write-heavy plans where declared write paths should be checked
   against allowed and forbidden path boundaries.
 - Guarded/write-heavy migration plans that must produce a structured
-  `WRITE_CONTRACT` before artifacts or later write phases proceed.
+  `WRITE_CONTRACT` and reviewable `write phase draft` before later write
+  phases proceed.
 - Dynamic workflow planning from a broad request.
 - Run status inspection for interrupted, paused, or recently completed workflows.
 - Clone/install readiness checks for this plugin or runtime.
@@ -93,13 +94,16 @@ the same adapter policy below.
 - Use `--planner fake` for deterministic tests and demos.
 - Dynamic planner modes require `--save-spec`; planning writes a validated spec
   and does not execute workers.
-- v0.16 workflow specs can express stage dependencies, consumed and produced
+- v0.17 workflow specs can express stage dependencies, consumed and produced
   artifact flow, and per-stage write-policy boundaries. Verified produced
   artifacts are persisted under `.cdw/runs/<run-id>/artifacts/` and hydrated
   into dependent stage prompts. Guarded/write-heavy stages can record boundary failures
   when declared `WRITE_PATHS` violate `--allow-path` or `--forbid-path`.
   Strict migration specs set `requires_write_contract=true` and require a
   machine-readable `WRITE_CONTRACT` JSON section with a `paths` array.
+  Passed structured contracts create a reviewable `write phase draft` artifact
+  with planned paths, actions, reasons, and checks. The draft does not apply
+  patches or modify source files.
 
 ## Approval Policy
 
@@ -140,6 +144,8 @@ worker results, verifier results, synthesis, and staged procedure state.
 - Run `cdw status <run-id> --json` when a machine-readable status is needed.
 - Run `cdw artifacts <run-id>` to list persisted artifacts for a run.
 - Run `cdw artifact <run-id> "<artifact name>"` to read a persisted artifact.
+- Run `cdw artifact <run-id> "write phase draft"` after a passed strict
+  guarded stage to review planned write paths before any write-heavy phase.
 - Run `cdw runs` to list recent persisted workflow runs.
 - Run `cdw review "<request>" --adapter codex-cli` for a real review workflow through the user's logged-in Codex CLI.
 - Run `cdw debug "<request>" --adapter codex-cli` for hypothesis-driven debugging.

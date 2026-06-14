@@ -23,23 +23,37 @@ def write_stage_artifacts(
     records = []
     stage_results = _stage_worker_results(state, stage)
     for artifact_name in stage.produces:
-        existing = _find_record(state, artifact_name, stage_id=stage.id)
-        record = existing or ArtifactRecord(
-            name=artifact_name,
-            stage_id=stage.id,
-            path=_artifact_relative_path(stage.id, artifact_name),
-            source_work_unit_ids=list(stage.work_unit_ids),
-        )
-        artifact_path = _artifact_path(root, state, record.path)
-        artifact_path.parent.mkdir(parents=True, exist_ok=True)
-        artifact_path.write_text(
+        record = write_artifact_content(
+            root,
+            state,
+            artifact_name,
+            stage,
             _render_artifact_markdown(artifact_name, stage, stage_results),
-            encoding="utf-8",
         )
-        if existing is None:
-            state.artifacts.append(record)
         records.append(record)
     return records
+
+
+def write_artifact_content(
+    root: Path,
+    state: RunState,
+    artifact_name: str,
+    stage: WorkflowStage,
+    content: str,
+) -> ArtifactRecord:
+    existing = _find_record(state, artifact_name, stage_id=stage.id)
+    record = existing or ArtifactRecord(
+        name=artifact_name,
+        stage_id=stage.id,
+        path=_artifact_relative_path(stage.id, artifact_name),
+        source_work_unit_ids=list(stage.work_unit_ids),
+    )
+    artifact_path = _artifact_path(root, state, record.path)
+    artifact_path.parent.mkdir(parents=True, exist_ok=True)
+    artifact_path.write_text(content, encoding="utf-8")
+    if existing is None:
+        state.artifacts.append(record)
+    return record
 
 
 def read_artifact(

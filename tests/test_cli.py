@@ -543,6 +543,41 @@ def test_artifact_command_prints_artifact_content(tmp_path, capsys):
     assert "first worker completed Run first stage" in captured.out
 
 
+def test_artifacts_commands_expose_write_phase_draft(tmp_path, capsys, monkeypatch):
+    spec_path = tmp_path / "boundary.workflow.json"
+    save_workflow_spec_bundle(spec_path, _boundary_bundle())
+    monkeypatch.setattr(
+        "cdw.cli._build_adapter",
+        lambda config, codex_command=None: StructuredBoundaryCliAdapter(),
+    )
+    main(["run", str(spec_path), "--root", str(tmp_path)])
+    run_id = capsys.readouterr().out.strip().split()[-1]
+    main(
+        [
+            "resume",
+            run_id,
+            "--root",
+            str(tmp_path),
+            "--approve-human-gates",
+        ]
+    )
+    capsys.readouterr()
+
+    list_exit_code = main(["artifacts", run_id, "--root", str(tmp_path)])
+    listed = capsys.readouterr()
+    read_exit_code = main(
+        ["artifact", run_id, "write phase draft", "--root", str(tmp_path)]
+    )
+    content = capsys.readouterr()
+
+    assert list_exit_code == 0
+    assert "artifact write phase draft stage migration-plan-review" in listed.out
+    assert read_exit_code == 0
+    assert "# write phase draft" in content.out
+    assert "src/users.py" in content.out
+    assert "does not apply patches" in content.out
+
+
 def test_artifact_command_reports_missing_artifact_without_traceback(tmp_path, capsys):
     spec_path = tmp_path / "artifact.workflow.json"
     save_workflow_spec_bundle(spec_path, _artifact_bundle())
@@ -765,6 +800,32 @@ class BoundaryCliAdapter:
         output = {
             "inventory": "Inventory complete",
             "patch-plan": "WRITE_PATHS:\n- secrets/key.py",
+        }.get(work_unit.id, f"{work_unit.id} complete")
+        return WorkerResult(
+            work_unit_id=work_unit.id,
+            status=WorkerStatus.SUCCEEDED,
+            summary=output,
+            evidence=[output],
+            raw_output=output,
+        )
+
+    def verify_worker_result(self, result):
+        return VerificationResult(
+            work_unit_id=result.work_unit_id,
+            status=VerificationStatus.PASSED,
+            notes="ok",
+        )
+
+
+class StructuredBoundaryCliAdapter:
+    def run_worker(self, work_unit):
+        output = {
+            "inventory": "Inventory complete",
+            "patch-plan": (
+                'WRITE_CONTRACT:\n{"paths":[{"path":"src/users.py",'
+                '"action":"modify","reason":"Rename User model to Account"}],'
+                '"checks":["python -m pytest tests/test_users.py"]}'
+            ),
         }.get(work_unit.id, f"{work_unit.id} complete")
         return WorkerResult(
             work_unit_id=work_unit.id,

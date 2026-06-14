@@ -1,4 +1,5 @@
 from cdw.codex_mcp import FakeCodexAdapter
+from cdw.artifacts import read_artifact
 from cdw.planner import build_plan
 from cdw.resume import resume_run
 from cdw.runtime import execute_plan, execute_workflow_bundle
@@ -228,6 +229,55 @@ def test_runtime_missing_required_write_contract_blocks_guarded_stage_artifact(
     assert not any(
         artifact.name == "guarded patch plan" for artifact in resumed.artifacts
     )
+
+
+def test_runtime_writes_write_phase_draft_for_structured_contract(tmp_path):
+    bundle = _boundary_bundle(
+        allowed_paths=["src/**"],
+        requires_write_contract=True,
+    )
+    state = execute_workflow_bundle(
+        bundle,
+        tmp_path,
+        BoundaryAdapter({"inventory": "Inventory complete"}),
+    )
+    contract = (
+        'WRITE_CONTRACT:\n{"paths":[{"path":"src/users.py",'
+        '"action":"modify","reason":"Rename User model to Account"}],'
+        '"checks":["python -m pytest tests/test_users.py"]}'
+    )
+
+    resumed = resume_run(
+        tmp_path,
+        state.run_id,
+        BoundaryAdapter({"patch-plan": contract}),
+        approve_human_gates=True,
+    )
+    resumed_again = resume_run(
+        tmp_path,
+        state.run_id,
+        BoundaryAdapter({}),
+        approve_human_gates=True,
+    )
+
+    drafts = [
+        artifact
+        for artifact in resumed_again.artifacts
+        if artifact.name == "write phase draft"
+    ]
+    assert resumed.synthesis is not None
+    assert resumed.synthesis.status == "complete"
+    assert len(drafts) == 1
+    content = read_artifact(
+        tmp_path,
+        resumed_again,
+        "write phase draft",
+        stage_id="migration-plan-review",
+    )
+    assert "src/users.py" in content
+    assert "Rename User model to Account" in content
+    assert "python -m pytest tests/test_users.py" in content
+    assert "does not apply patches" in content
 
 
 def test_runtime_persists_procedure_for_staged_run(tmp_path):

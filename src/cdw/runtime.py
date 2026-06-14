@@ -16,6 +16,7 @@ from cdw.schemas import (
     WorkerStatus,
 )
 from cdw.state import create_run_state, save_run_state
+from cdw.write_drafts import write_phase_draft_artifact
 from cdw.workflow_spec import build_workflow_spec_bundle
 
 
@@ -207,7 +208,13 @@ def ensure_stage_boundary_result(
 ) -> RunState:
     if not _stage_requires_boundary_check(stage):
         return state
-    if any(result.stage_id == stage.id for result in state.boundary_results):
+    existing = next(
+        (result for result in state.boundary_results if result.stage_id == stage.id),
+        None,
+    )
+    if existing is not None:
+        if write_phase_draft_artifact(root, state, stage, existing) is not None:
+            save_run_state(root, state)
         return state
     boundary_result = check_stage_boundaries(
         state.constraints,
@@ -215,6 +222,7 @@ def ensure_stage_boundary_result(
         _stage_worker_results(state, stage),
     )
     state.boundary_results.append(boundary_result)
+    write_phase_draft_artifact(root, state, stage, boundary_result)
     save_run_state(root, state)
     return state
 

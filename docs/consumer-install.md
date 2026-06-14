@@ -132,6 +132,16 @@ WRITE_CONTRACT:
 parsed `declared_write_paths`, planned `contract_checks`, and any boundary
 violations.
 
+When a structured contract passes, `cdw` also writes a `write phase draft`
+artifact. It is a reviewable markdown draft containing planned paths, actions,
+reasons, and checks. It is intentionally non-executing: it does not apply
+patches or modify source files.
+
+```powershell
+python -m cdw artifacts <run-id>
+python -m cdw artifact <run-id> "write phase draft"
+```
+
 Use `cdw status <run-id>` before resuming a workflow. It reports the synthesis
 status, pending human approval stage, state path, and adapter-aware approval
 resume command. Use `cdw status <run-id> --json` or `cdw runs --json` when a

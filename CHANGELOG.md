@@ -2,6 +2,15 @@
 
 All notable changes to `dynamic-workflows-for-Codex` are documented here.
 
+## v0.17 - 2026-06-14
+
+- Added `write phase draft` artifacts for passed guarded/write-heavy stages with structured write contracts.
+- Added `cdw.write_drafts` to render planned paths, actions, reasons, and checks without applying patches.
+- Runtime now creates or backfills the draft artifact across resume when a prior boundary result passed.
+- Existing `cdw artifacts` and `cdw artifact` commands can list and read write phase drafts.
+- Updated docs, skill routing, plugin metadata, and repo-local plugin packaging for write phase drafts.
+- Bumped package and plugin metadata to `0.17.0`.
+
 ## v0.16 - 2026-06-14
 
 - Added structured `WRITE_CONTRACT` parsing for guarded/write-heavy stage outputs.

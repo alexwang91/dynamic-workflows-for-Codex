@@ -159,3 +159,12 @@
 - Runtime injects the required `WRITE_CONTRACT` shape into strict guarded/write-heavy worker prompts.
 - Migration plan-review stages produce a `write path contract` artifact.
 - Codex CLI dynamic planner output schema includes `requires_write_contract`.
+
+## v0.17 Behavior
+
+- Passed guarded/write-heavy stages with structured write contracts create a `write phase draft` artifact.
+- The draft records stage id, contract-required/found state, planned paths, actions, reasons, and planned checks.
+- Failed boundary results and legacy `WRITE_PATHS`-only results do not create write phase drafts.
+- Resume keeps write phase draft records idempotent and can backfill the draft from an existing passed boundary result.
+- `cdw artifacts <run-id>` lists the draft and `cdw artifact <run-id> "write phase draft"` prints it.
+- The draft is review-only and does not apply patches or modify source files.
