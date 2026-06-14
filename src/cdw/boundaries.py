@@ -1,13 +1,17 @@
 from __future__ import annotations
 
 import fnmatch
+import json
 import re
+
+from pydantic import ValidationError
 
 from cdw.schemas import (
     BoundaryResult,
     BoundaryViolation,
     WorkflowSpecConstraints,
     WorkflowStage,
+    WritePathIntent,
     WorkerResult,
 )
 
@@ -16,6 +20,11 @@ _SECTION_RE = re.compile(
     r"^\s*(?:WRITE_PATHS|write paths|planned paths|paths)\s*:\s*(.*)$",
     re.IGNORECASE,
 )
+_CONTRACT_RE = re.compile(
+    r"^\s*(?:WRITE_CONTRACT|write contract)\s*:\s*(.*)$",
+    re.IGNORECASE,
+)
+_KNOWN_ACTIONS = {"create", "modify", "delete", "move", "rename", "unknown"}
 
 
 def extract_declared_write_paths(text: str) -> list[str]:
@@ -47,17 +56,38 @@ def check_stage_boundaries(
     stage: WorkflowStage,
     results: list[WorkerResult],
 ) -> BoundaryResult:
-    checked_paths = _declared_paths_from_results(results)
+    declared_write_paths = _structured_paths_from_results(results)
+    contract_checks = _contract_checks_from_results(results)
+    contract_required = constraints.requires_write_contract
+    contract_found = bool(declared_write_paths)
+    checked_paths = _unique(
+        [
+            *[intent.path for intent in declared_write_paths],
+            *_declared_paths_from_results(results),
+        ]
+    )
     violations = [
         violation
         for path in checked_paths
         if (violation := _check_path(path, constraints)) is not None
     ]
+    if contract_required and not contract_found:
+        violations.insert(
+            0,
+            BoundaryViolation(
+                path="<write-contract>",
+                reason="missing_write_contract",
+            ),
+        )
     return BoundaryResult(
         stage_id=stage.id,
         status="failed" if violations else "passed",
         checked_paths=checked_paths,
         violations=violations,
+        contract_required=contract_required,
+        contract_found=contract_found,
+        declared_write_paths=declared_write_paths,
+        contract_checks=contract_checks,
     )
 
 
@@ -69,6 +99,44 @@ def _declared_paths_from_results(results: list[WorkerResult]) -> list[str]:
         for evidence in result.evidence:
             paths.extend(extract_declared_write_paths(evidence))
     return _unique(paths)
+
+
+def _structured_paths_from_results(results: list[WorkerResult]) -> list[WritePathIntent]:
+    paths: list[WritePathIntent] = []
+    for result in results:
+        paths.extend(extract_structured_write_paths(result.summary))
+        paths.extend(extract_structured_write_paths(result.raw_output))
+        for evidence in result.evidence:
+            paths.extend(extract_structured_write_paths(evidence))
+    return _unique_write_intents(paths)
+
+
+def _contract_checks_from_results(results: list[WorkerResult]) -> list[str]:
+    checks: list[str] = []
+    for result in results:
+        checks.extend(extract_write_contract_checks(result.summary))
+        checks.extend(extract_write_contract_checks(result.raw_output))
+        for evidence in result.evidence:
+            checks.extend(extract_write_contract_checks(evidence))
+    return _unique(checks)
+
+
+def extract_structured_write_paths(text: str) -> list[WritePathIntent]:
+    paths: list[WritePathIntent] = []
+    for contract in _extract_contract_objects(text):
+        paths.extend(_paths_from_contract(contract))
+    return _unique_write_intents(paths)
+
+
+def extract_write_contract_checks(text: str) -> list[str]:
+    checks: list[str] = []
+    for contract in _extract_contract_objects(text):
+        if not isinstance(contract, dict):
+            continue
+        raw_checks = contract.get("checks", [])
+        if isinstance(raw_checks, list):
+            checks.extend(check for check in raw_checks if isinstance(check, str))
+    return _unique(checks)
 
 
 def _check_path(
@@ -96,6 +164,107 @@ def _check_path(
                 pattern=", ".join(constraints.allowed_paths),
             )
     return None
+
+
+def _extract_contract_objects(text: str) -> list[object]:
+    lines = text.splitlines()
+    contracts: list[object] = []
+    for index, line in enumerate(lines):
+        match = _CONTRACT_RE.match(line)
+        if match is None:
+            continue
+        parsed = _parse_contract_json(lines, index + 1, match.group(1))
+        if parsed is not None:
+            contracts.append(parsed)
+    return contracts
+
+
+def _parse_contract_json(
+    lines: list[str],
+    start_index: int,
+    inline: str,
+) -> object | None:
+    fragments: list[str] = []
+    if inline.strip():
+        inline_json = _strip_json_fence(inline.strip())
+        parsed_inline = _try_parse_json(inline_json)
+        if parsed_inline is not None:
+            return parsed_inline
+        fragments.append(inline_json)
+
+    for line in lines[start_index:]:
+        stripped = line.strip()
+        if stripped.startswith("```"):
+            continue
+        if not fragments and not stripped:
+            continue
+        fragments.append(line)
+        candidate = "\n".join(fragments).strip()
+        parsed = _try_parse_json(candidate)
+        if parsed is not None:
+            return parsed
+        if not stripped and fragments:
+            return None
+    return _try_parse_json("\n".join(fragments).strip())
+
+
+def _try_parse_json(candidate: str) -> object | None:
+    if not candidate:
+        return None
+    try:
+        return json.loads(_strip_json_fence(candidate))
+    except json.JSONDecodeError:
+        return None
+
+
+def _strip_json_fence(value: str) -> str:
+    stripped = value.strip()
+    if stripped.startswith("```json"):
+        stripped = stripped.removeprefix("```json").strip()
+    if stripped.startswith("```"):
+        stripped = stripped.removeprefix("```").strip()
+    if stripped.endswith("```"):
+        stripped = stripped.removesuffix("```").strip()
+    return stripped
+
+
+def _paths_from_contract(contract: object) -> list[WritePathIntent]:
+    raw_paths: object
+    if isinstance(contract, dict):
+        raw_paths = contract.get("paths", [])
+    else:
+        raw_paths = contract
+
+    if not isinstance(raw_paths, list):
+        return []
+
+    paths = []
+    for raw_path in raw_paths:
+        intent = _write_intent_from_raw(raw_path)
+        if intent is not None:
+            paths.append(intent)
+    return paths
+
+
+def _write_intent_from_raw(raw_path: object) -> WritePathIntent | None:
+    if isinstance(raw_path, str):
+        return WritePathIntent(path=raw_path)
+    if not isinstance(raw_path, dict):
+        return None
+
+    path = raw_path.get("path") or raw_path.get("file")
+    if not isinstance(path, str):
+        return None
+    action = raw_path.get("action", "modify")
+    if not isinstance(action, str) or action not in _KNOWN_ACTIONS:
+        action = "unknown"
+    reason = raw_path.get("reason", "")
+    if not isinstance(reason, str):
+        reason = ""
+    try:
+        return WritePathIntent(path=path, action=action, reason=reason)
+    except ValidationError:
+        return None
 
 
 def _normalize_declared_path(path: str) -> str | None:
@@ -160,5 +329,16 @@ def _unique(paths: list[str]) -> list[str]:
     for path in paths:
         if path and path not in seen:
             seen.add(path)
+            unique_paths.append(path)
+    return unique_paths
+
+
+def _unique_write_intents(paths: list[WritePathIntent]) -> list[WritePathIntent]:
+    seen = set()
+    unique_paths = []
+    for path in paths:
+        key = (path.path, path.action, path.reason)
+        if key not in seen:
+            seen.add(key)
             unique_paths.append(path)
     return unique_paths

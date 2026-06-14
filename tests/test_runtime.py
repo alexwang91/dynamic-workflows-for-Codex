@@ -173,6 +173,63 @@ def test_runtime_boundary_failure_blocks_guarded_stage_artifact(tmp_path):
     )
 
 
+def test_runtime_injects_write_contract_instruction_for_required_guarded_stage(
+    tmp_path,
+):
+    bundle = _boundary_bundle(
+        allowed_paths=["src/**"],
+        requires_write_contract=True,
+    )
+    state = execute_workflow_bundle(
+        bundle,
+        tmp_path,
+        BoundaryAdapter({"inventory": "Inventory complete"}),
+    )
+    adapter = RecordingAdapter()
+
+    resume_run(
+        tmp_path,
+        state.run_id,
+        adapter,
+        approve_human_gates=True,
+    )
+
+    prompts = dict(adapter.prompts)
+    assert "WRITE_CONTRACT:" in prompts["patch-plan"]
+    assert '"paths"' in prompts["patch-plan"]
+    assert "allowed paths: src/**" in prompts["patch-plan"]
+
+
+def test_runtime_missing_required_write_contract_blocks_guarded_stage_artifact(
+    tmp_path,
+):
+    bundle = _boundary_bundle(
+        allowed_paths=["src/**"],
+        requires_write_contract=True,
+    )
+    state = execute_workflow_bundle(
+        bundle,
+        tmp_path,
+        BoundaryAdapter({"inventory": "Inventory complete"}),
+    )
+
+    resumed = resume_run(
+        tmp_path,
+        state.run_id,
+        BoundaryAdapter({"patch-plan": "WRITE_PATHS:\n- src/users.py"}),
+        approve_human_gates=True,
+    )
+
+    assert resumed.synthesis is not None
+    assert resumed.synthesis.status == "incomplete"
+    assert resumed.boundary_results[0].violations[0].reason == (
+        "missing_write_contract"
+    )
+    assert not any(
+        artifact.name == "guarded patch plan" for artifact in resumed.artifacts
+    )
+
+
 def test_runtime_persists_procedure_for_staged_run(tmp_path):
     bundle = _two_stage_bundle(on_failure="stop")
 
@@ -401,6 +458,7 @@ class BoundaryAdapter:
 def _boundary_bundle(
     allowed_paths: list[str],
     forbidden_paths: list[str] | None = None,
+    requires_write_contract: bool = False,
 ) -> WorkflowSpecBundle:
     plan = WorkflowPlan(
         command="migrate",
@@ -431,6 +489,7 @@ def _boundary_bundle(
             allowed_paths=allowed_paths,
             forbidden_paths=forbidden_paths or [],
             requires_human_approval=True,
+            requires_write_contract=requires_write_contract,
         ),
         procedure=WorkflowProcedure(
             mode="guarded",

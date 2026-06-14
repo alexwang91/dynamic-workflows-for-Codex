@@ -29,6 +29,7 @@ def test_fake_dynamic_planner_builds_multi_stage_spec(tmp_path):
     assert bundle.procedure.stages[1].consumes == ["scope summary"]
     assert "validated workflow spec" in bundle.procedure.stages[1].produces
     assert bundle.constraints.write_policy == "read-only"
+    assert bundle.constraints.requires_write_contract is False
 
 
 def test_parse_dynamic_planner_output_accepts_raw_json(tmp_path):
@@ -110,6 +111,7 @@ def test_codex_cli_dynamic_planner_uses_current_codex_exec_args(
     assert "--output-schema" in calls["args"]
     assert "-a" not in calls["args"]
     assert "Return only JSON" in calls["args"][-1]
+    assert "requires_write_contract" in calls["args"][-1]
     assert calls["kwargs"]["encoding"] == "utf-8"
     assert "plan" in calls["schema"]["properties"]
     assert "procedure" in calls["schema"]["properties"]
@@ -121,6 +123,9 @@ def test_codex_cli_dynamic_planner_uses_current_codex_exec_args(
     assert "consumes" in stage_schema["required"]
     assert "produces" in stage_schema["required"]
     assert "write_policy" in stage_schema["required"]
+    constraints_schema = calls["schema"]["properties"]["constraints"]
+    assert "requires_write_contract" in constraints_schema["properties"]
+    assert "requires_write_contract" in constraints_schema["required"]
     assert "work_units" in calls["schema"]["properties"]["plan"]["required"]
 
 

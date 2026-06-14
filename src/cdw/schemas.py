@@ -53,6 +53,7 @@ class WorkflowSpecConstraints(BaseModel):
     allowed_paths: list[str] = Field(default_factory=list)
     forbidden_paths: list[str] = Field(default_factory=list)
     requires_human_approval: bool = False
+    requires_write_contract: bool = False
 
 
 StageGate = Literal["all_required_verified", "any_verified", "manual_review"]
@@ -236,11 +237,26 @@ class ArtifactRecord(BaseModel):
     source_work_unit_ids: list[str] = Field(default_factory=list)
 
 
+class WritePathIntent(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    path: str = Field(min_length=1)
+    action: Literal["create", "modify", "delete", "move", "rename", "unknown"] = (
+        "modify"
+    )
+    reason: str = ""
+
+
 class BoundaryViolation(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     path: str = Field(min_length=1)
-    reason: Literal["forbidden", "outside_allowed_paths", "invalid_path"]
+    reason: Literal[
+        "forbidden",
+        "outside_allowed_paths",
+        "invalid_path",
+        "missing_write_contract",
+    ]
     pattern: str | None = None
 
 
@@ -251,6 +267,10 @@ class BoundaryResult(BaseModel):
     status: Literal["passed", "failed"]
     checked_paths: list[str] = Field(default_factory=list)
     violations: list[BoundaryViolation] = Field(default_factory=list)
+    contract_required: bool = False
+    contract_found: bool = False
+    declared_write_paths: list[WritePathIntent] = Field(default_factory=list)
+    contract_checks: list[str] = Field(default_factory=list)
 
 
 class RunState(BaseModel):

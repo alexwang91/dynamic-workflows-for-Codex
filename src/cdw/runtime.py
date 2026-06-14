@@ -156,18 +156,23 @@ def ensure_stage_worker_results(
     completed = {result.work_unit_id for result in state.worker_results}
     work_units = {work_unit.id: work_unit for work_unit in state.plan.work_units}
     artifact_context = consumed_artifact_context(root, state, stage)
+    write_contract_context = _stage_write_contract_context(state, stage)
     for work_unit_id in stage.work_unit_ids:
         if work_unit_id in completed:
             continue
         work_unit = work_units[work_unit_id]
+        prompt_parts = [work_unit.prompt]
         if artifact_context:
+            prompt_parts.append(
+                "Use these verified upstream artifacts as context:\n"
+                f"{artifact_context}"
+            )
+        if write_contract_context:
+            prompt_parts.append(write_contract_context)
+        if len(prompt_parts) > 1:
             work_unit = work_unit.model_copy(
                 update={
-                    "prompt": (
-                        f"{work_unit.prompt}\n\n"
-                        "Use these verified upstream artifacts as context:\n"
-                        f"{artifact_context}"
-                    )
+                    "prompt": "\n\n".join(prompt_parts)
                 }
             )
         worker_result = adapter.run_worker(work_unit)
@@ -266,6 +271,29 @@ def _stage_boundary_failed(state: RunState, stage: WorkflowStage) -> bool:
 
 def _stage_requires_boundary_check(stage: WorkflowStage) -> bool:
     return stage.write_policy in {"guarded", "write-heavy"}
+
+
+def _stage_write_contract_context(state: RunState, stage: WorkflowStage) -> str:
+    if not state.constraints.requires_write_contract:
+        return ""
+    if not _stage_requires_boundary_check(stage):
+        return ""
+
+    allowed_paths = ", ".join(state.constraints.allowed_paths) or (
+        "any relative path not forbidden"
+    )
+    forbidden_paths = ", ".join(state.constraints.forbidden_paths) or "none"
+    return (
+        "This guarded/write-heavy stage must declare planned writes with a "
+        "machine-readable section before any write phase can proceed.\n"
+        "Use this exact shape:\n"
+        "WRITE_CONTRACT:\n"
+        '{"paths":[{"path":"relative/path.py","action":"modify",'
+        '"reason":"why this path is in scope"}],'
+        '"checks":["python -m pytest"]}\n'
+        f"allowed paths: {allowed_paths}\n"
+        f"forbidden paths: {forbidden_paths}"
+    )
 
 
 def _stage_requires_human_approval(stage: WorkflowStage) -> bool:

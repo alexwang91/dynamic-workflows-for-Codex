@@ -198,7 +198,7 @@ def _dynamic_planner_prompt(request: str) -> str:
         "- schema_version: \"3\"\n"
         "- kind: \"codex.dynamic-workflow\"\n"
         "- metadata: name, description, created_by\n"
-        "- constraints: write_policy, allowed_paths, forbidden_paths, requires_human_approval\n"
+        "- constraints: write_policy, allowed_paths, forbidden_paths, requires_human_approval, requires_write_contract\n"
         "- acceptance_criteria: string array\n"
         "- procedure: mode, triggers, stages, final_artifacts\n"
         "- procedure.stages: id, purpose, work_unit_ids, depends_on, consumes, produces, gate, on_failure, write_policy\n"
@@ -207,6 +207,7 @@ def _dynamic_planner_prompt(request: str) -> str:
         "Stage dependencies must reference earlier stages. Consumed artifacts must be produced by declared dependency stages.\n"
         "Default to read-only unless the request clearly requires guarded or write-heavy planning.\n"
         "Use manual_review or require_human gates for guarded or write-heavy stages.\n"
+        "Set requires_write_contract=true when guarded/write-heavy stages must emit WRITE_CONTRACT JSON.\n"
         f"Request: {request}\n"
     )
 
@@ -295,12 +296,14 @@ def _workflow_spec_output_schema() -> dict:
                     "allowed_paths": string_array,
                     "forbidden_paths": string_array,
                     "requires_human_approval": {"type": "boolean"},
+                    "requires_write_contract": {"type": "boolean"},
                 },
                 "required": [
                     "write_policy",
                     "allowed_paths",
                     "forbidden_paths",
                     "requires_human_approval",
+                    "requires_write_contract",
                 ],
             },
             "acceptance_criteria": string_array,

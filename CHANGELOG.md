@@ -2,6 +2,17 @@
 
 All notable changes to `dynamic-workflows-for-Codex` are documented here.
 
+## v0.16 - 2026-06-14
+
+- Added structured `WRITE_CONTRACT` parsing for guarded/write-heavy stage outputs.
+- Added `requires_write_contract` to workflow constraints.
+- Generated migration specs now require structured write contracts by default.
+- Boundary results now record contract-required/found state, parsed write path intents, and planned checks.
+- Runtime prompts strict guarded/write-heavy workers to emit `WRITE_CONTRACT` JSON.
+- Migration plan-review stages now produce a `write path contract` artifact.
+- Updated dynamic planner schema/prompt, docs, skill, and plugin metadata for structured write contracts.
+- Bumped package and plugin metadata to `0.16.0`.
+
 ## v0.15 - 2026-06-13
 
 - Added boundary extraction for explicit `WRITE_PATHS`, `Planned paths`, and `Paths` sections.

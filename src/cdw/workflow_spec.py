@@ -58,6 +58,7 @@ def _constraints_for_plan(plan: WorkflowPlan) -> WorkflowSpecConstraints:
             write_policy="write-heavy",
             forbidden_paths=[".git/**", ".cdw/**", ".agents/**", ".env*"],
             requires_human_approval=True,
+            requires_write_contract=True,
         )
     return WorkflowSpecConstraints(write_policy="read-only")
 
@@ -114,7 +115,11 @@ def _migration_procedure(plan: WorkflowPlan) -> WorkflowProcedure:
                 work_unit_ids=remaining_ids,
                 depends_on=["migration-inventory"] if "inventory" in work_unit_ids else [],
                 consumes=["migration inventory"] if "inventory" in work_unit_ids else [],
-                produces=["guarded patch plan", "migration risk review"],
+                produces=[
+                    "guarded patch plan",
+                    "migration risk review",
+                    "write path contract",
+                ],
                 gate="manual_review",
                 on_failure="require_human",
                 write_policy="guarded",
@@ -124,7 +129,12 @@ def _migration_procedure(plan: WorkflowPlan) -> WorkflowProcedure:
         mode="guarded",
         triggers=["migrate", "migration"],
         stages=stages,
-        final_artifacts=["migration inventory", "guarded patch plan", "synthesis report"],
+        final_artifacts=[
+            "migration inventory",
+            "guarded patch plan",
+            "write path contract",
+            "synthesis report",
+        ],
     )
 
 

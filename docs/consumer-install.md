@@ -113,6 +113,25 @@ declare `WRITE_PATHS:` in their output; the runtime records boundary failures
 when a declared path is forbidden, outside the allowlist, absolute, or uses
 parent traversal.
 
+Generated migration workflows are stricter: they set
+`requires_write_contract=true` and require a structured `WRITE_CONTRACT` JSON
+section before the guarded plan-review stage can write artifacts or feed a
+future write phase:
+
+```text
+WRITE_CONTRACT:
+{
+  "paths": [
+    {"path": "src/users.py", "action": "modify", "reason": "Rename User"}
+  ],
+  "checks": ["python -m pytest tests/test_users.py"]
+}
+```
+
+`cdw status <run-id> --json` exposes `contract_required`, `contract_found`,
+parsed `declared_write_paths`, planned `contract_checks`, and any boundary
+violations.
+
 Use `cdw status <run-id>` before resuming a workflow. It reports the synthesis
 status, pending human approval stage, state path, and adapter-aware approval
 resume command. Use `cdw status <run-id> --json` or `cdw runs --json` when a

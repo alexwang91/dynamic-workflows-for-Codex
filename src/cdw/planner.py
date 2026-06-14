@@ -147,11 +147,14 @@ def _migration_plan(request: str) -> WorkflowPlan:
                 prompt=(
                     "Propose a guarded patch plan for: "
                     f"{request}. ownership: split the migration into bounded "
-                    "file/module slices and name the checks required before edits."
+                    "file/module slices and name the checks required before edits. "
+                    "Include a machine-readable WRITE_CONTRACT JSON section with "
+                    'a "paths" array before any later write-heavy phase can proceed.'
                 ),
                 expected_output=(
                     "Ordered patch slices, ownership boundaries, risk notes, and "
-                    "required tests for each slice."
+                    'required tests for each slice, plus WRITE_CONTRACT with "paths", '
+                    '"action", "reason", and planned "checks".'
                 ),
             ),
             WorkUnit(
@@ -161,7 +164,8 @@ def _migration_plan(request: str) -> WorkflowPlan:
                 prompt=(
                     "Verify the proposed migration approach for: "
                     f"{request}. ownership: challenge risky slices, missing tests, "
-                    "compatibility breaks, and any area needing human approval."
+                    "compatibility breaks, missing WRITE_CONTRACT paths, and any "
+                    "area needing human approval."
                 ),
                 expected_output=(
                     "Patch-review findings, migration risks, required tests, and "

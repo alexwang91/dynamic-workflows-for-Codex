@@ -48,6 +48,8 @@ def test_summarize_run_reports_pending_human_approval(tmp_path):
             stage_id="migration-plan-review",
             status="failed",
             checked_paths=["secrets/key.py"],
+            contract_required=True,
+            contract_found=False,
             violations=[
                 BoundaryViolation(
                     path="secrets/key.py",
@@ -78,6 +80,8 @@ def test_summarize_run_reports_pending_human_approval(tmp_path):
     assert summary.artifacts[0]["name"] == "migration inventory"
     assert summary.boundary_failure_count == 1
     assert summary.boundary_failures[0]["stage_id"] == "migration-plan-review"
+    assert summary.boundary_failures[0]["contract_required"] is True
+    assert summary.boundary_failures[0]["contract_found"] is False
     assert summary.state_path == str(state_path)
     assert summary.resume_command == (
         f"python -m cdw resume {state.run_id} --adapter codex-cli --approve-human-gates"

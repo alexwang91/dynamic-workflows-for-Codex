@@ -34,6 +34,8 @@ def test_skill_content_routes_dynamic_workflow_tasks():
     assert "--allow-path <glob>" in content
     assert "--forbid-path <glob>" in content
     assert "boundary failures" in content
+    assert "WRITE_CONTRACT" in content
+    assert "requires_write_contract" in content
     assert "cdw artifacts <run-id>" in content
     assert "cdw artifact <run-id>" in content
     assert "hydrated" in content
