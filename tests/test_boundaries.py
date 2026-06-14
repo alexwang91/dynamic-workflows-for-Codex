@@ -42,6 +42,75 @@ def test_boundary_check_allows_declared_paths_inside_allowed_patterns():
     assert boundary.violations == []
 
 
+def test_boundary_check_parses_structured_write_contract_paths():
+    output = """WRITE_CONTRACT:
+{
+  "paths": [
+    {
+      "path": "src/users.py",
+      "action": "modify",
+      "reason": "Rename User references to Account"
+    }
+  ],
+  "checks": ["python -m pytest tests/test_users.py"]
+}
+"""
+    result = _worker_result(output)
+    stage = _guarded_stage()
+    constraints = WorkflowSpecConstraints(
+        allowed_paths=["src/**"],
+        requires_write_contract=True,
+    )
+
+    boundary = check_stage_boundaries(constraints, stage, [result])
+
+    assert boundary.status == "passed"
+    assert boundary.contract_required is True
+    assert boundary.contract_found is True
+    assert boundary.checked_paths == ["src/users.py"]
+    assert boundary.declared_write_paths[0].path == "src/users.py"
+    assert boundary.declared_write_paths[0].action == "modify"
+    assert boundary.declared_write_paths[0].reason == (
+        "Rename User references to Account"
+    )
+    assert boundary.contract_checks == ["python -m pytest tests/test_users.py"]
+
+
+def test_boundary_check_parses_inline_structured_write_contract():
+    output = (
+        'WRITE_CONTRACT: {"paths":[{"path":"src/users.py"}]}\n'
+        "Notes after the contract.\n"
+    )
+    result = _worker_result(output)
+    stage = _guarded_stage()
+    constraints = WorkflowSpecConstraints(
+        allowed_paths=["src/**"],
+        requires_write_contract=True,
+    )
+
+    boundary = check_stage_boundaries(constraints, stage, [result])
+
+    assert boundary.status == "passed"
+    assert boundary.contract_found is True
+    assert boundary.checked_paths == ["src/users.py"]
+
+
+def test_boundary_check_requires_structured_contract_when_configured():
+    result = _worker_result("WRITE_PATHS:\n- src/users.py")
+    stage = _guarded_stage()
+    constraints = WorkflowSpecConstraints(
+        allowed_paths=["src/**"],
+        requires_write_contract=True,
+    )
+
+    boundary = check_stage_boundaries(constraints, stage, [result])
+
+    assert boundary.status == "failed"
+    assert boundary.contract_required is True
+    assert boundary.contract_found is False
+    assert boundary.violations[0].reason == "missing_write_contract"
+
+
 def test_boundary_check_rejects_forbidden_paths_before_allowed_paths():
     result = _worker_result("WRITE_PATHS:\n- src/secrets/key.py")
     stage = _guarded_stage()

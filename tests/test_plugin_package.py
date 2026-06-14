@@ -16,7 +16,7 @@ def test_package_plugin_writes_manifest_and_skill(tmp_path):
 
     assert path == tmp_path / "dynamic-workflows-for-codex"
     assert manifest["name"] == "dynamic-workflows-for-codex"
-    assert manifest["version"] == "0.15.0"
+    assert manifest["version"] == "0.16.0"
     assert manifest["skills"] == "./skills/"
     assert "doctor" in manifest["interface"]["longDescription"]
     assert "codex-cli" in manifest["interface"]["longDescription"]
@@ -30,6 +30,7 @@ def test_package_plugin_writes_manifest_and_skill(tmp_path):
     assert "allowed and forbidden path boundaries" in manifest["interface"][
         "longDescription"
     ]
+    assert "structured WRITE_CONTRACT" in manifest["interface"]["longDescription"]
     assert "write-policy boundaries" in manifest["interface"]["longDescription"]
     assert "workflow specs" in manifest["interface"]["longDescription"]
     assert len(manifest["interface"]["defaultPrompt"]) <= 3

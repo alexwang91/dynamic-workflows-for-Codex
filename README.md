@@ -1,9 +1,9 @@
 # Dynamic Workflows For Codex
 
-[![Release](https://img.shields.io/badge/release-v0.15-blue)](CHANGELOG.md)
+[![Release](https://img.shields.io/badge/release-v0.16-blue)](CHANGELOG.md)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](pyproject.toml)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-133%20passed-brightgreen)](tests)
+[![Tests](https://img.shields.io/badge/tests-138%20passed-brightgreen)](tests)
 
 External dynamic workflow runtime for Codex.
 
@@ -127,6 +127,21 @@ sections. When workflow constraints include `allowed_paths` or
 artifacts. Forbidden paths, paths outside the allowlist, absolute paths, and
 parent traversal paths make the workflow incomplete.
 
+Strict guarded migrations now require a machine-readable `WRITE_CONTRACT`
+section. The runtime injects the required JSON shape into guarded/write-heavy
+worker prompts, parses the returned `paths` and planned `checks`, and fails the
+stage before artifact writing if the contract is missing:
+
+```text
+WRITE_CONTRACT:
+{
+  "paths": [
+    {"path": "src/users.py", "action": "modify", "reason": "Rename User"}
+  ],
+  "checks": ["python -m pytest tests/test_users.py"]
+}
+```
+
 Stages with `manual_review` gates or `require_human` failure behavior pause
 before worker execution. The run state records `pending_human_approval`, CLI
 reports `waiting for human approval`, and the workflow continues only after:
@@ -153,7 +168,7 @@ spec for tests and demos. `codex-cli` asks the user's own Codex CLI to design a
 full v3 workflow spec using a strict output schema, validates it locally, and
 writes it only when `--save-spec` is provided.
 That schema includes stage dependencies, consumed artifacts, produced artifacts,
-and stage write policies.
+stage write policies, and the `requires_write_contract` constraint.
 
 ## Modes
 
@@ -218,7 +233,7 @@ python -m cdw review "Review this branch" --adapter live --codex-command /path/t
 
 ## Project Status
 
-Current release: `v0.15`.
+Current release: `v0.16`.
 
 - v0.1: MVP runtime with plan/review/debug, fake adapter, live MCP boundary.
 - v0.2: workflow specs, resume, guarded migration, skill installer.
@@ -248,6 +263,9 @@ Current release: `v0.15`.
   hydration for dependent stages, and artifact inspection CLI commands.
 - v0.15: executable path boundary checks for guarded/write-heavy stages,
   including `--allow-path`, `--forbid-path`, boundary results, and status output.
+- v0.16: structured `WRITE_CONTRACT` JSON for strict guarded migrations,
+  parsed write path intents, contract status in boundary results, and a
+  `write path contract` artifact.
 
 See [CHANGELOG.md](CHANGELOG.md) for details.
 

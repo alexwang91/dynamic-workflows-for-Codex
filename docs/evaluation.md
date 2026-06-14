@@ -148,3 +148,14 @@
 - `cdw status` and `cdw status --json` expose boundary failure summaries.
 - `--allow-path` and `--forbid-path` can be supplied while planning, running specs, or invoking direct workflows.
 - Generated migration specs include default forbidden runtime and secret paths.
+
+## v0.16 Behavior
+
+- Boundary extraction parses structured `WRITE_CONTRACT` JSON sections.
+- `WorkflowSpecConstraints` includes `requires_write_contract`.
+- Generated migration specs set `requires_write_contract=true`.
+- Strict guarded/write-heavy stages fail when a structured write contract is missing or empty.
+- Boundary results expose `contract_required`, `contract_found`, parsed `declared_write_paths`, and planned `contract_checks`.
+- Runtime injects the required `WRITE_CONTRACT` shape into strict guarded/write-heavy worker prompts.
+- Migration plan-review stages produce a `write path contract` artifact.
+- Codex CLI dynamic planner output schema includes `requires_write_contract`.

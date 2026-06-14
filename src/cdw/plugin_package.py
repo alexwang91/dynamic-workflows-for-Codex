@@ -43,8 +43,8 @@ def package_repo_marketplace(root: Path) -> Path:
 def _plugin_manifest() -> dict:
     return {
         "name": PLUGIN_NAME,
-        "version": "0.15.0",
-        "description": "Dynamic workflow runtime with Codex CLI planning, run status inspection, human approval gates, stage dependencies, persisted artifacts, path boundary checks, artifact flow, bootstrap, doctor checks, and skill routing.",
+        "version": "0.16.0",
+        "description": "Dynamic workflow runtime with Codex CLI planning, run status inspection, human approval gates, stage dependencies, persisted artifacts, structured write contracts, path boundary checks, artifact flow, bootstrap, doctor checks, and skill routing.",
         "author": {
             "name": "Local developer",
         },
@@ -66,7 +66,9 @@ def _plugin_manifest() -> dict:
                 "Verified stage artifacts are persisted under .cdw runs and "
                 "hydrated into dependent stage prompts. Guarded/write-heavy "
                 "stages can check declared write paths against allowed and "
-                "forbidden path boundaries."
+                "forbidden path boundaries. Strict guarded migrations can "
+                "require a structured WRITE_CONTRACT before artifacts or later "
+                "write phases proceed."
             ),
             "developerName": "Local developer",
             "category": "Productivity",
@@ -74,7 +76,7 @@ def _plugin_manifest() -> dict:
             "defaultPrompt": [
                 "Bootstrap this clone for Codex dynamic workflows.",
                 "Create a dynamic workflow spec with Codex CLI.",
-                "Run guarded migrations with allowed and forbidden path boundaries.",
+                "Run guarded migrations with a structured WRITE_CONTRACT.",
             ],
         },
     }
